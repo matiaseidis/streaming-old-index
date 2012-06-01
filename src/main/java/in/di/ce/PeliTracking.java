@@ -9,26 +9,26 @@ import junit.framework.Assert;
 
 public class PeliTracking {
 
-	private Map<String, List<UserCachos>> cachosPorPeli = new HashMap();
+	private Map<String, List<CachosDelUser>> cachosPorPeli = new HashMap();
 	
-	public List<UserCachos> grafoFor(String peliId){
+	public List<CachosDelUser> grafoFor(String peliId){
 		
 		Assert.assertNotNull(peliId);
 		
-		List<UserCachos> cachos = cachosPorPeli.get(peliId);
+		List<CachosDelUser> cachos = cachosPorPeli.get(peliId);
 
 		long byteActual = 0;
 		
-		List<UserCachos> result = new ArrayList<UserCachos>();
+		List<CachosDelUser> result = new ArrayList<CachosDelUser>();
 		
 		
 		/*
 		 * revisar esto
 		 */
-		for(UserCachos userCachos: cachos){
+		for(CachosDelUser userCachos: cachos){
 			for(Cacho cacho : userCachos.getCachos()){
 				if ( cacho.getFrom() == byteActual ){
-					result.add(new UserCachos(userCachos.getUser(), cacho));
+					result.add(new CachosDelUser(userCachos.getUser(), cacho));
 					byteActual = cacho.getFrom() + cacho.getLenght() + 1;
 				}
 			}
