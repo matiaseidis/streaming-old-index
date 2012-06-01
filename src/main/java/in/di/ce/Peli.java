@@ -1,24 +1,13 @@
 package in.di.ce;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.springframework.util.Assert;
+import lombok.Getter;
+import lombok.Setter;
 
 public class Peli {
 	
-	private Map<String, Object> subs = new HashMap<String, Object>();
-
-	public boolean addSub(String lang, Object sub){
-		
-		Assert.notNull(lang);
-		Assert.notNull(sub);
-		
-		return this.getSubEn(lang) != null;
-	}
+	@Getter @Setter private String nombre; // nombre del archivo
+	@Getter @Setter private long id; // md5 del file
+	@Getter @Setter private long lenght; //en bytes
 	
-	public Object getSubEn(String lang) {
-		return subs.get(lang);
-	}
 
 }

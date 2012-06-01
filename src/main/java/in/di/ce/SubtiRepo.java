@@ -9,18 +9,19 @@ import org.springframework.util.Assert;
 
 public class SubtiRepo {
 
-	Map<String, Peli> pelis = new HashMap<String, Peli>();
+	Map<String, PeliSubs> pelis = new HashMap<String, PeliSubs>();
 
 	public Object getSubti(String peliHash, String lang) throws SubtituloNoDisponibleException{
 		
 		Assert.notNull(peliHash);
 		Assert.notNull(lang);
 		
-		Peli peli = pelis.get(peliHash);
+		PeliSubs peli = pelis.get(peliHash);
 		if(peli == null){
 			throw new SubtituloNoDisponibleException();
 		}
 		return peli.getSubEn(lang);
 	}
+	
 	
 }
