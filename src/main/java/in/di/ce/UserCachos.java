@@ -1,13 +1,18 @@
 package in.di.ce;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
-import lombok.Setter;
 
 public class UserCachos {
 	
-	@Getter @Setter private User user;
-	@Getter @Setter private List<Cacho> cachos;
+	@Getter final private User user;
+	@Getter final private List<Cacho> cachos = new ArrayList();
+
+	public UserCachos(User user, Cacho cacho) {
+		this.user = user;
+		this.getCachos().add(cacho);
+	}
 	
 }
