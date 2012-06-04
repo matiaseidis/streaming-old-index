@@ -5,13 +5,13 @@ import in.di.ce.prevalence.BaseModel;
 import in.di.ce.prevalence.transaction.AddCacho;
 import in.di.ce.prevalence.transaction.RemoveCacho;
 import in.di.ce.service.rta.Respuesta;
-import junit.framework.Assert;
 import lombok.Getter;
 import lombok.Setter;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -31,10 +31,10 @@ public class CachoService {
 		public @ResponseBody Respuesta add(ModelAndView m, @PathVariable String usuario, 
 				@PathVariable String peli, @PathVariable Long from, @PathVariable Long lenght) throws Exception{
 			
-			Assert.assertNotNull( usuario );
-			Assert.assertNotNull( peli );
-			Assert.assertNotNull( from );
-			Assert.assertNotNull( lenght );
+			Assert.notNull( usuario );
+			Assert.notNull( peli );
+			Assert.notNull( from );
+			Assert.notNull( lenght );
 			
 			return new Respuesta(baseModel.getPrevayler().execute(new AddCacho(usuario, peli, from, lenght)));
 		}
@@ -43,10 +43,10 @@ public class CachoService {
 		public @ResponseBody Respuesta remove(ModelAndView m, @PathVariable String usuario, 
 				@PathVariable String peli, @PathVariable Long from, @PathVariable Long lenght) throws Exception{
 			
-			Assert.assertNotNull( usuario );
-			Assert.assertNotNull( peli );
-			Assert.assertNotNull( from );
-			Assert.assertNotNull( lenght );
+			Assert.notNull( usuario );
+			Assert.notNull( peli );
+			Assert.notNull( from );
+			Assert.notNull( lenght );
 			
 			return new Respuesta(baseModel.getPrevayler().execute(new RemoveCacho(usuario, peli, from, lenght)));
 		}
@@ -54,7 +54,7 @@ public class CachoService {
 		@RequestMapping(value="list/{peli}", method = RequestMethod.GET)
 		public @ResponseBody Respuesta listForVideo(ModelAndView m, @PathVariable String peli){
 			
-			Assert.assertNotNull( peli );
+			Assert.notNull( peli );
 			
 			VideoCachos vc = baseModel.getModel().listForVideo( peli );
 

@@ -1,6 +1,6 @@
-*.class
-
+#*.class
+target
 # Package Files #
-*.jar
-*.war
-*.ear
+#*.jar
+#*.war
+#*.ear
