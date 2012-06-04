@@ -1,9 +1,20 @@
 package in.di.ce;
 
-public class User {
+import java.io.Serializable;
 
-	private long id;
-	private String ip;
-	private int port;
+import lombok.Getter;
+import lombok.Setter;
+
+public class User implements Serializable{
+
+	@Getter final private String id;
+	@Getter @Setter private String ip;
+	@Getter @Setter private int port;
+	
+	public User(String id, String ip, int port) {
+		this.id = id;
+		this.ip = ip;
+		this.port = port;
+	}
 	
 }

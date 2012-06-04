@@ -1,12 +1,19 @@
 package in.di.ce;
 
-import lombok.Getter;
-import lombok.Setter;
+import java.io.Serializable;
 
-public class Video {
+import lombok.Getter;
+
+public class Video implements Serializable{
 	
-	@Setter @Getter private String fileName; // original
-	@Setter @Getter private String id; //md5
-	@Setter @Getter private long lenght; //bytes
+	@Getter private final String fileName; // original
+	@Getter private final String id; //md5
+	@Getter private final long lenght; //bytes
 	
+	public Video(String id, String fileName, Long lenght) {
+		this.fileName = fileName;
+		this.id = id;
+		this.lenght = lenght;
+	}
+		
 }

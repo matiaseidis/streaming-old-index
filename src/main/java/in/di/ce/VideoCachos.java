@@ -1,30 +1,48 @@
 package in.di.ce;
 
-import java.util.Map;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class VideoCachos {
+import lombok.Getter;
+
+public class VideoCachos implements Serializable{
 	
-	private Map<String, UserCachos> userCachos;
+	/**
+	 * 
+	 */
+	@Getter private final Video video;
+	private static final long serialVersionUID = 1L;
+	private ConcurrentHashMap<String, UserCachos> userCachosMap = new ConcurrentHashMap<String, UserCachos>();
+	
+	public VideoCachos(Video video){
+		this.video = video;
+	}
 	
 	boolean userHasCachos(String user){
-		return userCachos.get(user) != null;
+		return userCachosMap.get(user) != null;
 	}
 
 	public boolean addCacho(String usuario, Cacho newCacho) {
 		
-		if( userCachos.get(usuario) == null) {
-			userCachos.put(usuario, new UserCachos( usuario ));
-		}
-		
-		return userCachos.get(usuario).addCacho( newCacho );
+		userCachosMap.putIfAbsent(usuario, new UserCachos( usuario ));
+
+		UserCachos userCachos = userCachosMap.get( usuario );
+
+		return userCachos.addCacho( newCacho );
 	}
 	
 	public UserCachos getCachosDe ( String user ){
-		return userCachos.get( user );
+		return userCachosMap.get( user );
 	}
 
 	public void removeUser(String usuario) {
 		
+	}
+	
+	public List<UserCachos> getCachos(){
+		return new ArrayList(userCachosMap.values());
 	}
 	
 }

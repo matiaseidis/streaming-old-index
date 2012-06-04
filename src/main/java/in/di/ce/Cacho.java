@@ -1,8 +1,10 @@
 package in.di.ce;
 
+import java.io.Serializable;
+
 import lombok.Getter;
 
-public class Cacho {
+public class Cacho implements Serializable{
 
 	@Getter final private long from;
 	@Getter final private long lenght;
@@ -13,11 +15,13 @@ public class Cacho {
 	}
 	
 	public long lastByte(){
-		return from + lenght;
+		return from + lenght - 1;
 	}
 
 	public boolean isChoterThan(Cacho newCacho) {
-		return this.from > newCacho.getFrom() && this.lastByte() < newCacho.lastByte();
+		if (newCacho == null) 
+			return false;
+		return this.from >= newCacho.getFrom() && this.lastByte() <= newCacho.lastByte();
 	}
 	
 }
