@@ -13,10 +13,12 @@ import lombok.Getter;
 public class Tracking {
 	
 	@Getter final private UserRepo usersRepo = new UserRepo();
+	@Getter private final SubsRepo subsRepo = new SubsRepo();
 	
 	private final ConcurrentHashMap<String, Video> videosRepo = new ConcurrentHashMap<String, Video>();
 	
 	private final Map<String, VideoCachos> videoCachosRepo = new HashMap<String, VideoCachos>();
+	
 
 	public User loadUserByUserId(String userId) {
 		return usersRepo.getById(userId);
