@@ -9,11 +9,13 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.util.Assert;
 
 public class Notifier {
 	
 	private static final String URL_BASE = "http://vivid-light-4117.herokuapp.com/"; 
+	public Logger logger = Logger.getLogger(getClass());
 
 	public String addUser(String userId, String ip, int port){
 		
