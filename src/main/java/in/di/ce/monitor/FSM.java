@@ -8,10 +8,13 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.monitor.FileAlterationListener;
 import org.apache.commons.io.monitor.FileAlterationMonitor;
 import org.apache.commons.io.monitor.FileAlterationObserver;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 public class FSM {
 	
@@ -60,9 +63,38 @@ public class FSM {
 
 		@Override
 		public void onFileCreate(File file) {
-			if( !file.getName().endsWith(".part")) {
-				notifier.addVideo(md5(file), file.getName(), file.length());
+			
+			File dest = null;
+			
+			if(file.getName().contains(" ")) {
+				dest = new File(org.apache.commons.lang.StringUtils.replace(file.getAbsolutePath(), " ", "_"));
+				if ( !file.renameTo(dest) ){
+					throw new RuntimeException("no puedo renombrar");
+				}
+				file= dest;
 			}
+			
+			String videoId = md5(file);
+			
+			if( file.getName().endsWith(".part")) {
+				String[] meta = file.getName().split(".");
+				
+				Assert.isTrue(meta.length == 3);
+				
+				String[] splittedMeta = meta[1].split("-");
+				
+				Assert.isTrue(splittedMeta.length == 2);
+
+				notifier.addCacho(userId, videoId, Long.valueOf(splittedMeta[0]), Long.valueOf(splittedMeta[1]));
+			} else {
+				notifier.addVideo(videoId, file.getName(), file.length());
+			}
+			System.err.println();
+			System.out.println("cachos:");
+			System.out.println(notifier.listCachos(videoId));
+			System.out.println("videos:");
+			System.out.println(notifier.listVideos(videoId));
+			
 		}
 
 		private String md5(File file) {
