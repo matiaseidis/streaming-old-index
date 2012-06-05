@@ -144,6 +144,11 @@ public class SharedVideosListener implements FileAlterationListener {
 
 		logger.info("video borrado <"+file.getName()+">, actualizamos repo");
 
+		/*
+		 * FIX ME no tengo em md5 porquie no tengo los bytes, porque el video no existe.
+		 * Podemos o meter el hash en el file name haciendolo parte de la metadata o lookup reverso y obtenerlo del servicio pasandole el fileName
+		 * 
+		 */
 		String videoId = md5(file);
 
 		if(isPart(file)) {

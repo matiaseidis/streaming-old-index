@@ -14,7 +14,7 @@ import org.springframework.util.Assert;
 
 public class Notifier {
 	
-	private static final String URL_BASE = "http://vivid-light-4117.herokuapp.com/"; 
+	private static final String URL_BASE = "http://indice.herokuapp.com/"; 
 	public Logger logger = Logger.getLogger(getClass());
 
 	public String addUser(String userId, String ip, int port){
