@@ -69,8 +69,12 @@ public class SharedVideosListener implements FileAlterationListener {
 		if(isPart(file)) {
 
 			String [] meta = meta(file);
-
-			notifier.addCacho(userId, videoId, Long.valueOf(meta[0]), Long.valueOf(meta[1]));
+			long start  = Long.valueOf(meta[0]);
+			long lenght = Long.valueOf(meta[1]);
+			
+			if( isComplete(file, lenght) ){
+				notifier.addCacho(userId, videoId, start, lenght);
+			}
 		} else {
 			notifier.addVideo(videoId, file.getName(), file.length());
 		}
@@ -80,6 +84,10 @@ public class SharedVideosListener implements FileAlterationListener {
 		System.out.println("videos:");
 		System.out.println(notifier.listVideos(videoId));
 
+	}
+
+	private boolean isComplete(File file, long lenght) {
+		return file.length() == lenght;
 	}
 
 	private String[] meta(File file) {
