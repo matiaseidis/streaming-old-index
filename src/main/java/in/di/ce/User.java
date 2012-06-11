@@ -2,6 +2,8 @@ package in.di.ce;
 
 import java.io.Serializable;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,6 +17,11 @@ public class User implements Serializable{
 		this.id = id;
 		this.ip = ip;
 		this.port = port;
+	}
+	
+	@Override
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this);
 	}
 	
 }

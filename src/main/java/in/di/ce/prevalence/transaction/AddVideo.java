@@ -1,6 +1,7 @@
 package in.di.ce.prevalence.transaction;
 
 import in.di.ce.Tracking;
+import in.di.ce.Video;
 
 import java.util.Date;
 
@@ -23,7 +24,7 @@ public class AddVideo implements TransactionWithQuery {
 	public Object executeAndQuery(Object prevalentSystem, Date executionTime)
 			throws Exception {
 		Tracking model = (Tracking) prevalentSystem;
-		return model.addVideo(id, fileName, size);
+		return model.getVideosRepo().addVideo(new Video(id, fileName, size));
 	}
 
 	

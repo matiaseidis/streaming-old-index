@@ -2,6 +2,8 @@ package in.di.ce;
 
 import java.io.Serializable;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+
 import lombok.Getter;
 
 public class Video implements Serializable{
@@ -14,6 +16,11 @@ public class Video implements Serializable{
 		this.fileName = fileName;
 		this.id = id;
 		this.lenght = lenght;
+	}
+	
+	@Override
+	public String toString() {
+		return ToStringBuilder.reflectionToString(this);
 	}
 		
 }

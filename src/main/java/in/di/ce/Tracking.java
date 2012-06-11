@@ -1,113 +1,88 @@
 package in.di.ce;
 
 import in.di.ce.error.VideoNoExisteException;
+import in.di.ce.service.VideoService;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.util.Assert;
+
 import lombok.Getter;
 
-public class Tracking {
+public class Tracking implements Serializable {
 	
 	@Getter final private UserRepo usersRepo = new UserRepo();
 	@Getter private final SubsRepo subsRepo = new SubsRepo();
+	@Getter private final VideosRepo videosRepo = new VideosRepo();
+	@Getter private final CachosRepo cachosRepo = new CachosRepo();
 	
-	private final ConcurrentHashMap<String, Video> videosRepo = new ConcurrentHashMap<String, Video>();
 	
-	private final Map<String, VideoCachos> videoCachosRepo = new HashMap<String, VideoCachos>();
+	
+//	private final ConcurrentHashMap<String, Video> videosRepo = new ConcurrentHashMap<String, Video>();
+	
+//	private final ConcurrentHashMap<String, List<Long>> usersVideosRepo = new ConcurrentHashMap<String, List<Long>>();
+	
+//	private final Map<String, VideoCachos> videoCachosRepo = new HashMap<String, VideoCachos>();
 	
 
 	public User loadUserByUserId(String userId) {
 		return usersRepo.getById(userId);
 	}
 	
-	public boolean addCacho(String usuario, String peli, Long from, Long lenght) throws VideoNoExisteException {
+	public boolean addCacho(String userId, String ip, int port, String peli, String fileName, Long from, Long lenght) throws VideoNoExisteException {
 		
-		if ( !videosRepo.containsKey( peli )) { 
-			throw new VideoNoExisteException();
+		Video video = videosRepo.getById(peli);
+		
+		User user = usersRepo.getById(userId);
+		Cacho cacho = new Cacho(from, lenght);
+
+		if( video == null){
+			video  = new Video(peli, fileName, lenght);
+			videosRepo.addVideo(video);
 		}
-		if ( !videoCachosRepo.containsKey( peli )) {
-			Video video = videosRepo.get(peli);
-			VideoCachos videoCachos = new VideoCachos(video);
-			videoCachosRepo.put(peli, videoCachos);
+		if (user == null) {
+			user = new User(userId, ip, port);
+			usersRepo.addUser(user);
 		}
 		
-		VideoCachos videoCachos = videoCachosRepo.get(peli);
-		
-		Cacho newCacho = new Cacho(from, lenght);
-		
-		return videoCachos.addCacho( usuario, newCacho );
+		return cachosRepo.addCacho(video, user, cacho);
 	}
 	
 
-	public boolean removeCacho(String usuario, String peli, Long from, Long lenght) {
+	public boolean removeCacho(String userId, String peli, Long from, Long lenght) {
 		
-		VideoCachos videoCachos = videoCachosRepo.get(peli);
+		Video video = videosRepo.getById(peli);
+		User user = usersRepo.getById(userId);
+		Cacho cacho = new Cacho(from, lenght);
 		
-		if(videoCachos == null) {
+		if(video == null || user == null){
+			System.out.println("user or video not in repositories");
 			return false;
 		}
 		
-		UserCachos userCachos = videoCachos.getCachosDe ( usuario );
-
-		if( userCachos == null ) {
-			return false;
-		}
-		
-		Cacho toRemove =  null; 
-		
-		for(Cacho c: userCachos.getCachos()){
-			if ( c.getFrom() == from && c.getLenght() == lenght){
-				toRemove = c;
-			}
-		}
-		
-		if( toRemove == null){
-			return false;
-		}
-		
-		boolean removed = userCachos.removeCacho( toRemove );
-		
-		if(userCachos.getCachos().isEmpty()){
-			videoCachos.removeUser( usuario );
-		}
-		
-		return removed;
+		return cachosRepo.removeCacho(video, user, cacho);
 	}
-
-	public VideoCachos listForVideo(String peli) {
-		return videoCachosRepo.get(peli);
-	}
-
-
+	
 	public String fileNameForId(String id) throws VideoNoExisteException {
-		Video video = videosRepo.get( id );
+		Video video = videosRepo.getById( id );
 		if( video == null ){
 			throw new VideoNoExisteException();
 		}
 		return video.getFileName();
 	}
 
-
-	public boolean addVideo(String id, String fileName, Long size) {
-		return videosRepo.putIfAbsent(id, new Video(id, fileName, size)) == null;
-	}
-
-
-	public boolean removeVideo(String id) {
-		return videosRepo.remove(id) != null;
-	}
-
-
 	public List<Video> listVideos() {
-		return new ArrayList<Video>(videosRepo.values());
+		return videosRepo.listVideos();
 	}
-
 
 	public List<UserCacho> grafo(String peli) {
+		
+		Video video = videosRepo.getById(peli);
 		
 		List<UserCacho> result = new ArrayList<UserCacho>();
 		long currentByte = 1;
@@ -116,7 +91,7 @@ public class Tracking {
 
 		while ( !done ){
 
-			thisCacho = cachoStartingAt(peli, currentByte);
+			thisCacho = cachosRepo.cachoStartingAt(video, currentByte);
 			
 			if(thisCacho == null || thisCacho.getCacho() == null){
 
@@ -127,26 +102,8 @@ public class Tracking {
 				currentByte = thisCacho.getCacho().lastByte() + 1;
 				result.add(thisCacho);
 			}
-			
 		}
-		
 		return result;
 	}
-
 	
-	private UserCacho cachoStartingAt(String peli, long from) {
-		
-		UserCacho result = new UserCacho(null, null);
-		
-		VideoCachos vc = videoCachosRepo.get(peli);
-		
-		for ( UserCachos uc : vc.getCachos() ) {
-			for ( Cacho c : uc.getCachos() ) {
-				if ( c.getFrom() == from && !c.isChoterThan(result.getCacho())) {
-					result = new UserCacho(getUsersRepo().getById(uc.getUserId()), c);
-				}
-			}
-		}
-		return result;
-	}
 }

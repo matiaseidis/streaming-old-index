@@ -27,7 +27,7 @@ public class AddUser implements TransactionWithQuery {
 		if(model.getUsersRepo().getById(nombre) != null){
 			throw new UsuarioDuplicadoException();
 		}
-		return model.getUsersRepo().add(new User(nombre, ip, port));
+		return model.getUsersRepo().addUser(new User(nombre, ip, port));
 	}
 
 }

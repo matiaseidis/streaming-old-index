@@ -9,26 +9,30 @@ import org.prevayler.TransactionWithQuery;
 
 public class AddCacho implements TransactionWithQuery {
 	
-	private final String usuario; 
+	private final String userId; 
+	private final String ip;
+	private final int port;
+	
 	private final String peli; 
+	private final String fileName;
 	private final Long from;
 	private final Long lenght;
-
-	public AddCacho(String usuario, String peli, Long from, Long lenght) {
+	
+	public AddCacho(String usuario, String ip, int port, String peli, String fileName, Long from, Long lenght) {
 		this.from = from;
 		this.lenght = lenght;
 		this.peli = peli;
-		this.usuario = usuario;
+		this.userId = usuario;
+		this.ip = ip;
+		this.port = port;
+		this.fileName = fileName;
 	}
 
 	@Override
 	public Object executeAndQuery(Object prevalentSystem, Date executionTime)
 			throws Exception {
 		Tracking model = (Tracking) prevalentSystem;
-		if( model.getUsersRepo().getById(usuario) == null ){
-			throw new UsuarioNoExisteException();
-		}
-		return model.addCacho(usuario, peli, from, lenght);
+		return model.addCacho(userId, ip, port, peli, fileName, from, lenght);
 	}
 
 }

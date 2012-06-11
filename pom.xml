@@ -8,11 +8,11 @@
 	<name>ce Maven Webapp</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
-<!-- 	<dependency> -->
-<!--             <groupId>org.eclipse.jetty</groupId> -->
-<!--             <artifactId>jetty-servlet</artifactId> -->
-<!--             <version>7.4.5.v20110725</version> -->
-<!--         </dependency> -->
+	<dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>7.4.5.v20110725</version>
+        </dependency>
         <dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
