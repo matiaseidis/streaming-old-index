@@ -12,6 +12,7 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
+
 public class RetrievalPlanTest {
 	
 	String videoId = "test-video-id";
