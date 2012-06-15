@@ -1,50 +1,101 @@
 package in.di.ce.service;
 
+import in.di.ce.Tracking;
+import in.di.ce.Video;
+import in.di.ce.prevalence.BaseModel;
+import in.di.ce.service.rta.Respuesta;
 
-//@Controller
-//@RequestMapping("video")
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+
+@Controller
+@RequestMapping("video")
 public class VideoService {
 	
-//	public Logger logger = Logger.getLogger(getClass());
-//
-//	
-//	@Autowired @Setter @Getter private BaseModel baseModel;
-//	
-//	@RequestMapping(value="fileName/{id}", method = RequestMethod.GET)
-//	public @ResponseBody Respuesta fileNameForId(ModelAndView m, @PathVariable String id) throws VideoNoExisteException{
-//		
-//		Assert.notNull( id );
-//
-//		return new Respuesta(baseModel.getModel().fileNameForId ( id ));
-//	}
-//	
-//
-//	@RequestMapping(value="add/{id}/{fileName}/{size}", method = RequestMethod.GET)
-//	public @ResponseBody Respuesta add(ModelAndView m, @PathVariable String id, 
-//			@PathVariable String fileName, @PathVariable Long size) throws Exception{
-//		
-//		Assert.notNull( id );
-//		Assert.notNull( fileName );
-//		Assert.notNull( size );
-//		
-//		
-//		
-//		return new Respuesta(baseModel.getPrevayler().execute(new AddVideo(id, fileName, size)));
-//	}
-//	
-//	@RequestMapping(value="remove/{userId}/{videoId}", method = RequestMethod.GET)
-//	public @ResponseBody Respuesta remove(ModelAndView m, @PathVariable String userId, @PathVariable String videoId) throws Exception{
-//		
-//		Assert.notNull( userId );
-//		Assert.notNull( videoId );
-//		
-//		return new Respuesta(baseModel.getPrevayler().execute(new RemoveVideo( userId, videoId )));
-//	}
-//	
-//	@RequestMapping(value="list", method = RequestMethod.GET)
-//	public @ResponseBody Respuesta list(ModelAndView m){
-//		return new Respuesta(baseModel.getModel().listVideos()) ;
-//	}
-//	
+	private static final Log log = LogFactory.getLog(VideoService.class); 
+	
+	@Autowired @Setter @Getter private Tracking tracking;
+	@Autowired @Setter @Getter private BaseModel baseModel;
+	
+	@RequestMapping(value="register/{videoId}/{fileName}/{lenght}/{chunks}/{userId}", method = RequestMethod.GET)
+	public Respuesta<Boolean> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable long lenght, @PathVariable String chunks, @PathVariable String userId){
+		if(tracking.videoExist(videoId)){
+			log.info("Unable to add video ["+videoId+"]in videos central repository. Video already exists");
+			throw new IllegalArgumentException("video id: " + videoId+" is already registered in central repository");
+		}
+		Video video = new Video(videoId, fileName, lenght, chunkIds(chunks), userId);
+		return new Respuesta(tracking.registerVideo(video));
+	}
+	
+	/*
+	 * chunk map format expected: 
+	 * ordinal-chunkId|ordinal-chunkId
+	 */
+	@RequestMapping(value="registerChunks/{videoId}/{userId}/{chunks}", method = RequestMethod.GET)
+	public Respuesta<Boolean> registerChunks(@PathVariable String videoId, @PathVariable String userId, @PathVariable String chunks){
+		List<Integer> chunkOrdinals = chunkOrdinals(videoId, chunks);
+		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
+		return new Respuesta(tracking.registerChunks(videoId, userId, chunkOrdinals));
+	}
+	/*
+	 * chunk map format expected: 
+	 * ordinal-chunkId|ordinal-chunkId
+	 */
+	@RequestMapping(value="unregisterChunks/{videoId}/{userId}/{chunks}", method = RequestMethod.GET)
+	public Respuesta<Boolean> unregisterChunks(@PathVariable String videoId, @PathVariable String userId, @PathVariable String chunks){
+		List<Integer> chunkOrdinals = chunkOrdinals(videoId, chunks);
+		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
+		return new Respuesta(tracking.unregisterChunks(videoId, userId, chunkOrdinals));
+	}
+	
+	@RequestMapping(value="getChunks/{videoId}/{userId}", method = RequestMethod.GET)
+	public Respuesta<List<Integer>> getChunksFrom(@PathVariable String videoId, @PathVariable String userId){
+		if(!tracking.videoExist(videoId)){
+			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
+		}
+		log.info("about to retrieve chunks from video: " +  videoId + " for user " + userId);
+		return new Respuesta(tracking.getChunksFrom(videoId, userId)); 
+	}
+
+	private List<Integer> chunkOrdinals(String videoId, String chunks) {
+		if(!tracking.videoExist(videoId)){
+			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
+		}
+		Video video = tracking.getVideo(videoId);
+		List<Integer> result = new ArrayList<Integer>();
+		
+		for(String chunk : chunks.split("|")){
+			String[] splittedChunk = chunk.split("-");
+			int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
+			String chunkId = splittedChunk[1];
+			
+			if(video.getChunks().get(chunkOrdinal) != null && video.getChunks().get(chunkOrdinal).equals(chunkId)){
+				result.add(chunkOrdinal);
+			}
+		}
+		if(CollectionUtils.isEmpty(result)){
+			throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
+		}
+		return result;
+	}
+
+	
+	private List<String> chunkIds(String chunks) {
+		return Arrays.asList(chunks.split(","));
+	}
 
 }
