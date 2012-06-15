@@ -95,6 +95,16 @@ public class Tracking implements Serializable {
 		}
 		return new ArrayList<UserChunks>(userChunks.values());
 	}
+
+	public String getVideoIdFromFilename(String fileName) {
+		
+		for(Map.Entry<String, Video> entry : videos.entrySet()){
+			if(entry.getValue().getFileName().equals(fileName)){
+				return entry.getKey();
+			}
+		}
+		return null;
+	}
 	
 	
 }

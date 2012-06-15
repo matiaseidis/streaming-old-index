@@ -1,6 +1,7 @@
 package in.di.ce.service;
 
 import in.di.ce.Tracking;
+import in.di.ce.UserChunks;
 import in.di.ce.error.VideoNoExisteException;
 import in.di.ce.prevalence.BaseModel;
 import in.di.ce.service.rta.Respuesta;
@@ -30,9 +31,9 @@ public class PlanService {
 	@Autowired @Setter @Getter private BaseModel baseModel;
 
 	@RequestMapping(value="{videoId}", method = RequestMethod.GET)
-	public Respuesta<List> get(@PathVariable String videoId) throws VideoNoExisteException{
+	public Respuesta<List<UserChunks>> getRetrievalPlan(@PathVariable String videoId){
 		log.info("returning grafo for video: " + videoId);
-		return new Respuesta(tracking.grafo(videoId));
+		return new Respuesta<List<UserChunks>>(tracking.grafo(videoId));
 	}
 
 }

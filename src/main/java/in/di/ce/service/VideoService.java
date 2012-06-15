@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ public class VideoService {
 	 */
 	@RequestMapping(value="registerChunks/{videoId}/{userId}/{chunks}", method = RequestMethod.GET)
 	public Respuesta<Boolean> registerChunks(@PathVariable String videoId, @PathVariable String userId, @PathVariable String chunks){
-		List<Integer> chunkOrdinals = chunkOrdinals(videoId, chunks);
+		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 		return new Respuesta(tracking.registerChunks(videoId, userId, chunkOrdinals));
 	}
@@ -55,12 +56,18 @@ public class VideoService {
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
-	@RequestMapping(value="unregisterChunks/{videoId}/{userId}/{chunks}", method = RequestMethod.GET)
-	public Respuesta<Boolean> unregisterChunks(@PathVariable String videoId, @PathVariable String userId, @PathVariable String chunks){
-		List<Integer> chunkOrdinals = chunkOrdinals(videoId, chunks);
+	@RequestMapping(value="unregisterChunks/{fileName}/{userId}/{from}/{lenght}", method = RequestMethod.GET)
+	public Respuesta<Boolean> unregisterChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
+		
+		if(StringUtils.isEmpty(fileName)){
+			throw new IllegalArgumentException("File name can not be null nor empty");
+		}
+		String videoId = tracking.getVideoIdFromFilename(fileName);
+		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 		return new Respuesta(tracking.unregisterChunks(videoId, userId, chunkOrdinals));
 	}
+	
 	
 	@RequestMapping(value="getChunks/{videoId}/{userId}", method = RequestMethod.GET)
 	public Respuesta<List<Integer>> getChunksFrom(@PathVariable String videoId, @PathVariable String userId){
@@ -71,27 +78,45 @@ public class VideoService {
 		return new Respuesta(tracking.getChunksFrom(videoId, userId)); 
 	}
 
-	private List<Integer> chunkOrdinals(String videoId, String chunks) {
-		if(!tracking.videoExist(videoId)){
-			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
-		}
-		Video video = tracking.getVideo(videoId);
-		List<Integer> result = new ArrayList<Integer>();
-		
-		for(String chunk : chunks.split("|")){
-			String[] splittedChunk = chunk.split("-");
-			int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
-			String chunkId = splittedChunk[1];
-			
-			if(video.getChunks().get(chunkOrdinal) != null && video.getChunks().get(chunkOrdinal).equals(chunkId)){
-				result.add(chunkOrdinal);
-			}
-		}
-		if(CollectionUtils.isEmpty(result)){
-			throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
-		}
-		return result;
+//	private List<Integer> chunkOrdinalsForNewVideo(String videoId, String chunks) {
+//		if(!tracking.videoExist(videoId)){
+//			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
+//		}
+//		Video video = tracking.getVideo(videoId);
+//		List<Integer> result = new ArrayList<Integer>();
+//		String[] chunksSplitted = chunks.split(",");
+//		if(chunksSplitted.length == 0){
+//			throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
+//		}
+//		
+//		for(int i = 0; i<chunksSplitted.length; i++){
+//			video.getChunks().add(i,chunksSplitted[i]);
+//		}
+//		
+//		return result;
+//	}
+	
+	private List<Integer> chunkOrdinalsForExistentVideo(String videoId, String chunks) {
+	if(!tracking.videoExist(videoId)){
+		throw new IllegalArgumentException("video id: " + videoId+" does not exist");
 	}
+	Video video = tracking.getVideo(videoId);
+	List<Integer> result = new ArrayList<Integer>();
+	
+	for(String chunk : chunks.split("\\|")){
+		String[] splittedChunk = chunk.split("-");
+		int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
+		String chunkId = splittedChunk[1];
+		
+		if(video.getChunks().get(chunkOrdinal) != null && video.getChunks().get(chunkOrdinal).equals(chunkId)){
+			result.add(chunkOrdinal);
+		}
+	}
+	if(CollectionUtils.isEmpty(result)){
+		throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
+	}
+	return result;
+}
 
 	
 	private List<String> chunkIds(String chunks) {

@@ -51,7 +51,7 @@ public Logger logger = Logger.getLogger(getClass());
 		return (Tracking) prevayler.prevalentSystem();
 	}
 
-	public User loadUserByUserId(String id) {
-		return getModel().loadUserByUserId(id);
-	}
+//	public User loadUserByUserId(String id) {
+//		return getModel().loadUserByUserId(id);
+//	}
 }
