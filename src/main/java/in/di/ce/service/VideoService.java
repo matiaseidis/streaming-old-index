@@ -21,10 +21,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 
 @Controller
-@RequestMapping("video")
+@RequestMapping("/video")
 public class VideoService {
 	
 	private static final Log log = LogFactory.getLog(VideoService.class); 
@@ -32,8 +34,17 @@ public class VideoService {
 	@Autowired @Setter @Getter private Tracking tracking;
 	@Autowired @Setter @Getter private BaseModel baseModel;
 	
-	@RequestMapping(value="register/{videoId}/{fileName}/{lenght}/{chunks}/{userId}", method = RequestMethod.GET)
-	public Respuesta<Boolean> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable long lenght, @PathVariable String chunks, @PathVariable String userId){
+	@RequestMapping(value="check/{videoId}", method = RequestMethod.GET)
+	public @ResponseBody Respuesta<Video> checkVideo(@PathVariable String videoId){
+		Video video = null;
+		if(tracking.videoExist(videoId)){
+			video = tracking.getVideo(videoId);
+		}
+		return new Respuesta(video);
+	}	
+	
+	@RequestMapping(value="register/{videoId}/{fileName}/{lenght}/{userId}", method = RequestMethod.POST)
+	public @ResponseBody Respuesta<Boolean> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable Long lenght, @PathVariable String userId, @RequestParam(value="chunks", required=true) String chunks){
 		if(tracking.videoExist(videoId)){
 			log.info("Unable to add video ["+videoId+"]in videos central repository. Video already exists");
 			throw new IllegalArgumentException("video id: " + videoId+" is already registered in central repository");
@@ -46,8 +57,14 @@ public class VideoService {
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
-	@RequestMapping(value="registerChunks/{videoId}/{userId}/{chunks}", method = RequestMethod.GET)
-	public Respuesta<Boolean> registerChunks(@PathVariable String videoId, @PathVariable String userId, @PathVariable String chunks){
+	@RequestMapping(value="registerChunks/{fileName}/{userId}/{chunks}", method = RequestMethod.GET)
+	public Respuesta<Boolean> registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
+		
+		if(StringUtils.isEmpty(fileName)){
+			throw new IllegalArgumentException("File name can not be null nor empty");
+		}
+		String videoId = tracking.getVideoIdFromFilename(fileName);
+				
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 		return new Respuesta(tracking.registerChunks(videoId, userId, chunkOrdinals));
@@ -103,8 +120,8 @@ public class VideoService {
 	Video video = tracking.getVideo(videoId);
 	List<Integer> result = new ArrayList<Integer>();
 	
-	for(String chunk : chunks.split("\\|")){
-		String[] splittedChunk = chunk.split("-");
+	for(String chunk : chunks.split("\\&")){
+		String[] splittedChunk = chunk.split("!");
 		int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
 		String chunkId = splittedChunk[1];
 		
@@ -120,7 +137,8 @@ public class VideoService {
 
 	
 	private List<String> chunkIds(String chunks) {
-		return Arrays.asList(chunks.split(","));
+		List<String> result = Arrays.asList(chunks.split("!"));
+		return result;
 	}
 
 }
