@@ -86,7 +86,7 @@ public class VideoService {
 			log.error("unable to register chunks "+ userId +" - "+videoId+" - "+chunks, e);
 		}
 		
-		return new Respuesta(tracking.registerChunks(videoId, userId, chunkOrdinals));
+		return new Respuesta(registered);
 	}
 	/*
 	 * chunk map format expected: 
