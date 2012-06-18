@@ -34,21 +34,21 @@ public class VideoService {
 	
 	private static final Log log = LogFactory.getLog(VideoService.class); 
 	
-	@Autowired @Setter @Getter private Tracking tracking;
+//	@Autowired @Setter @Getter private Tracking tracking;
 	@Autowired @Setter @Getter private BaseModel baseModel;
 	
 	@RequestMapping(value="check/{videoId}", method = RequestMethod.GET)
 	public @ResponseBody Respuesta<Video> checkVideo(@PathVariable String videoId){
 		Video video = null;
-		if(tracking.videoExist(videoId)){
-			video = tracking.getVideo(videoId);
+		if(baseModel.getModel().videoExist(videoId)){
+			video = baseModel.getModel().getVideo(videoId);
 		}
 		return new Respuesta(video);
 	}	
 	
 	@RequestMapping(value="register/{videoId}/{fileName}/{lenght}/{userId}", method = RequestMethod.POST)
 	public @ResponseBody Respuesta<Boolean> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable Long lenght, @PathVariable String userId, @RequestParam(value="chunks", required=true) String chunks){
-		if(tracking.videoExist(videoId)){
+		if(baseModel.getModel().videoExist(videoId)){
 			log.info("Unable to add video ["+videoId+"]in videos central repository. Video already exists");
 			throw new IllegalArgumentException("video id: " + videoId+" is already registered in central repository");
 		}
@@ -74,7 +74,7 @@ public class VideoService {
 		if(StringUtils.isEmpty(fileName)){
 			throw new IllegalArgumentException("File name can not be null nor empty");
 		}
-		String videoId = tracking.getVideoIdFromFilename(fileName);
+		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
 				
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
@@ -98,7 +98,7 @@ public class VideoService {
 		if(StringUtils.isEmpty(fileName)){
 			throw new IllegalArgumentException("File name can not be null nor empty");
 		}
-		String videoId = tracking.getVideoIdFromFilename(fileName);
+		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 		boolean registered = false;
@@ -113,13 +113,14 @@ public class VideoService {
 	
 	
 	@RequestMapping(value="getChunks/{videoId}/{userId}", method = RequestMethod.GET)
-	public Respuesta<List<Integer>> getChunksFrom(@PathVariable String videoId, @PathVariable String userId){
-		if(!tracking.videoExist(videoId)){
+	public @ResponseBody List<String> getChunksFrom(@PathVariable String videoId, @PathVariable String userId){
+		if(!baseModel.getModel().videoExist(videoId)){
 			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
 		}
 		log.info("about to retrieve chunks from video: " +  videoId + " for user " + userId);
-		return new Respuesta(tracking.getChunksFrom(videoId, userId)); 
+		return baseModel.getModel().getVideo(videoId).getChunks(); 
 	}
+	
 
 //	private List<Integer> chunkOrdinalsForNewVideo(String videoId, String chunks) {
 //		if(!tracking.videoExist(videoId)){
@@ -140,10 +141,10 @@ public class VideoService {
 //	}
 	
 	private List<Integer> chunkOrdinalsForExistentVideo(String videoId, String chunks) {
-	if(!tracking.videoExist(videoId)){
+	if(!baseModel.getModel().videoExist(videoId)){
 		throw new IllegalArgumentException("video id: " + videoId+" does not exist");
 	}
-	Video video = tracking.getVideo(videoId);
+	Video video = baseModel.getModel().getVideo(videoId);
 	List<Integer> result = new ArrayList<Integer>();
 	
 	for(String chunk : chunks.split("\\&")){

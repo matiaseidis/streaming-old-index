@@ -34,6 +34,9 @@ public class RegisterVideo implements TransactionWithQuery {
 	public Object executeAndQuery(Object prevalentSystem, Date executionTime) {
 		
 		Tracking tracking = (Tracking) prevalentSystem;
+		
+		/*TODO validar si ya existe*/
+		
 		Video video = new Video(videoId, fileName, lenght, chunks, userId);
 		return tracking.registerVideo(video);
 	}

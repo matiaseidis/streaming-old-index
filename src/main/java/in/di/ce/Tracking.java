@@ -34,12 +34,15 @@ public class Tracking implements Serializable {
 	
 	public boolean registerChunks(String videoId, String userId, List<Integer> chunks){
 		
-		tracking.putIfAbsent(videoId, new HashMap<String, List<Integer>>());
+		if(tracking.get(videoId) == null){
+			throw new IllegalStateException("Can't register chunks for video: "+videoId+". there is no such video in database.");
+		}
 		
 		if (tracking.get(videoId).get(userId) == null){
 			tracking.get(videoId).put(userId, new ArrayList<Integer>());
 			log.info("adding chunk list for video "+ videoId + " for user " + userId);
 		}
+		
 		return tracking.get(videoId).get(userId).addAll(chunks);
 	}
 	
