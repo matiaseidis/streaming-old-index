@@ -3,6 +3,9 @@ package in.di.ce.service;
 import in.di.ce.Tracking;
 import in.di.ce.Video;
 import in.di.ce.prevalence.BaseModel;
+import in.di.ce.prevalence.transaction.RegisterChunks;
+import in.di.ce.prevalence.transaction.RegisterVideo;
+import in.di.ce.prevalence.transaction.UnregisterChunks;
 import in.di.ce.service.rta.Respuesta;
 
 import java.util.ArrayList;
@@ -49,8 +52,16 @@ public class VideoService {
 			log.info("Unable to add video ["+videoId+"]in videos central repository. Video already exists");
 			throw new IllegalArgumentException("video id: " + videoId+" is already registered in central repository");
 		}
-		Video video = new Video(videoId, fileName, lenght, chunkIds(chunks), userId);
-		return new Respuesta(tracking.registerVideo(video));
+		
+		
+		boolean registered = false;
+		try {
+			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new RegisterVideo(videoId, fileName, lenght, this.chunkIds(chunks), userId));
+		} catch (Exception e) {
+			log.error("unable to register video "+ videoId, e);
+		}
+		
+		return new Respuesta(registered);
 	}
 	
 	/*
@@ -67,6 +78,14 @@ public class VideoService {
 				
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
+
+		boolean registered = false;
+		try {
+			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new RegisterChunks(videoId, userId, chunkOrdinals));
+		} catch (Exception e) {
+			log.error("unable to register chunks "+ userId +" - "+videoId+" - "+chunks, e);
+		}
+		
 		return new Respuesta(tracking.registerChunks(videoId, userId, chunkOrdinals));
 	}
 	/*
@@ -82,7 +101,14 @@ public class VideoService {
 		String videoId = tracking.getVideoIdFromFilename(fileName);
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
 		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
-		return new Respuesta(tracking.unregisterChunks(videoId, userId, chunkOrdinals));
+		boolean registered = false;
+		try {
+			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new UnregisterChunks(videoId, userId, chunkOrdinals));
+		} catch (Exception e) {
+			log.error("unable to unregister chunks "+ userId +" - "+videoId+" - "+chunks, e);
+		}
+		
+		return new Respuesta(registered);
 	}
 	
 	
