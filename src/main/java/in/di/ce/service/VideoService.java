@@ -1,6 +1,5 @@
 package in.di.ce.service;
 
-import in.di.ce.Tracking;
 import in.di.ce.Video;
 import in.di.ce.prevalence.BaseModel;
 import in.di.ce.prevalence.transaction.RegisterChunks;
@@ -75,8 +74,13 @@ public class VideoService {
 			throw new IllegalArgumentException("File name can not be null nor empty");
 		}
 		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
-				
+		if(StringUtils.isEmpty(videoId)){
+			throw new IllegalArgumentException("No video id for file "+fileName+" in central repository");
+		}
 		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(videoId, chunks);
+		if(CollectionUtils.isEmpty(chunkOrdinals)){
+			throw new IllegalArgumentException("No chunks passed for register for file: "+fileName+" - id: "+videoId);
+		}
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 
 		boolean registered = false;
@@ -121,30 +125,13 @@ public class VideoService {
 		return baseModel.getModel().getVideo(videoId).getChunks(); 
 	}
 	
-
-//	private List<Integer> chunkOrdinalsForNewVideo(String videoId, String chunks) {
-//		if(!tracking.videoExist(videoId)){
-//			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
-//		}
-//		Video video = tracking.getVideo(videoId);
-//		List<Integer> result = new ArrayList<Integer>();
-//		String[] chunksSplitted = chunks.split(",");
-//		if(chunksSplitted.length == 0){
-//			throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
-//		}
-//		
-//		for(int i = 0; i<chunksSplitted.length; i++){
-//			video.getChunks().add(i,chunksSplitted[i]);
-//		}
-//		
-//		return result;
-//	}
-	
 	private List<Integer> chunkOrdinalsForExistentVideo(String videoId, String chunks) {
+		
 	if(!baseModel.getModel().videoExist(videoId)){
 		throw new IllegalArgumentException("video id: " + videoId+" does not exist");
 	}
 	Video video = baseModel.getModel().getVideo(videoId);
+	
 	List<Integer> result = new ArrayList<Integer>();
 	
 	for(String chunk : chunks.split("\\&")){

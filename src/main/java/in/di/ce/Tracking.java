@@ -26,7 +26,7 @@ public class Tracking implements Serializable {
 	 * chunks repository
 	 * [videoId:[userId:[chunks]]]
 	 */
-	private final ConcurrentMap<String, Map<String, List<Integer>>> tracking = new ConcurrentHashMap<String, Map<String,List<Integer>>>();
+	private final ConcurrentMap<String, Map<String, List<Integer>>> usersLocalRepoTracking = new ConcurrentHashMap<String, Map<String,List<Integer>>>();
 	
 	public boolean registerVideo(Video video){
 		return videos.putIfAbsent(video.getId(), video) == null;
@@ -34,32 +34,32 @@ public class Tracking implements Serializable {
 	
 	public boolean registerChunks(String videoId, String userId, List<Integer> chunks){
 		
-		if(tracking.get(videoId) == null){
+		if(usersLocalRepoTracking.get(videoId) == null){
 			throw new IllegalStateException("Can't register chunks for video: "+videoId+". there is no such video in database.");
 		}
 		
-		if (tracking.get(videoId).get(userId) == null){
-			tracking.get(videoId).put(userId, new ArrayList<Integer>());
+		if (usersLocalRepoTracking.get(videoId).get(userId) == null){
+			usersLocalRepoTracking.get(videoId).put(userId, new ArrayList<Integer>());
 			log.info("adding chunk list for video "+ videoId + " for user " + userId);
 		}
 		
-		return tracking.get(videoId).get(userId).addAll(chunks);
+		return usersLocalRepoTracking.get(videoId).get(userId).addAll(chunks);
 	}
 	
 	public boolean unregisterChunks(String videoId, String userId, List<Integer> chunks){
 		
-		if (!tracking.containsKey(videoId) || !tracking.get(videoId).containsKey(userId)){ 
+		if (!usersLocalRepoTracking.containsKey(videoId) || !usersLocalRepoTracking.get(videoId).containsKey(userId)){ 
 			return false;
 		}
-		return tracking.get(videoId).get(userId).removeAll(chunks);
+		return usersLocalRepoTracking.get(videoId).get(userId).removeAll(chunks);
 	}
 	
 	public List<Integer>getChunksFrom(String videoId, String userId){
 		
-		if (!tracking.containsKey(videoId) || !tracking.get(videoId).containsKey(userId)){ 
+		if (!usersLocalRepoTracking.containsKey(videoId) || !usersLocalRepoTracking.get(videoId).containsKey(userId)){ 
 			return null;
 		}
-		return tracking.get(videoId).get(userId);
+		return usersLocalRepoTracking.get(videoId).get(userId);
 	}
 
 	public boolean videoExist(String videoId) {
@@ -70,31 +70,52 @@ public class Tracking implements Serializable {
 		return videos.get(videoId);
 	}
 
-	public List<UserChunks> grafo(String videoId) {
+	public List<UserChunks> grafo(String videoId, String userId) {
 		
-		Map<String, List<Integer>> usersWithChunks = tracking.get(videoId);
+		Map<String, List<Integer>> usersWithChunks = usersLocalRepoTracking.get(videoId);
 		
-		List<UserChunks> result = new ArrayList<UserChunks>();
 		if(MapUtils.isEmpty(usersWithChunks)){
+			log.info("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId);
 			return null;
 		}
 		
-		Map<Integer, String> chunksForUser = new HashMap<Integer, String>();
+		UserChunks thisUserChunks = new UserChunks(userId, new ArrayList<Integer>());
+		
+		/*
+		 * userId:[chunkOrdinals]
+		 */
+		Map<String, List<Integer>> chunks = new HashMap<String, List<Integer>>();
+		Map<String, UserChunks> userChunks = new HashMap<String, UserChunks>();
+		
+		if(usersWithChunks.containsKey(userId) && CollectionUtils.isNotEmpty(usersWithChunks.get(userId))){
+			/*
+			 * el usuario tiene chunks de este video
+			 */
+			thisUserChunks.getChunks().addAll(usersWithChunks.get(userId));
+			userChunks.put(userId, thisUserChunks);
+		}
+		
 		for(Map.Entry<String, List<Integer>> entry : usersWithChunks.entrySet()){
-			if(CollectionUtils.isNotEmpty(entry.getValue())){
-				for(Integer i : entry.getValue()){
-					if(chunksForUser.get(i) == null){
-						chunksForUser.put(i, entry.getKey());
+			if(CollectionUtils.isNotEmpty(entry.getValue()) && !entry.getKey().equals(userId)){
+				for(Integer chunkOrdinal : entry.getValue()){
+					if(!thisUserChunks.getChunks().contains(chunkOrdinal)){
+						
+//						TODO el usuario con el conjunto de chunks consecutivos mas corto desde el ordinal actual
+						// necesito recorrer de otra manera la lista de chunks (por orden natural de chunk ordinal)
+//						String poorUserId = getUserWithShortSegmentFrom(ordinalActual, usersWithChunks);
+						
+						
+						if(chunks.get(entry.getKey()) == null){
+							chunks.put(entry.getKey(), new ArrayList<Integer>());
+						}
+						chunks.get(entry.getKey()).add(chunkOrdinal);
 					}
 				}
 			}
 		}
-		Map<String, UserChunks> userChunks = new HashMap<String, UserChunks>();
-		for(Map.Entry<Integer, String> entry : chunksForUser.entrySet()){
-			if(userChunks.get(entry.getValue())==null){
-				userChunks.put(entry.getValue(), new UserChunks(entry.getValue(), new ArrayList<Integer>()));
-			}
-			userChunks.get(entry.getValue()).getChunks().add(entry.getKey());
+		
+		for(Map.Entry<String, List<Integer>> entry : chunks.entrySet()){
+			userChunks.put(entry.getKey(), new UserChunks(entry.getKey(), entry.getValue()));
 		}
 		return new ArrayList<UserChunks>(userChunks.values());
 	}

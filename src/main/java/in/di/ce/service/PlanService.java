@@ -30,10 +30,10 @@ public class PlanService {
 
 	@Autowired @Setter @Getter private BaseModel baseModel;
 
-	@RequestMapping(value="{videoId}", method = RequestMethod.GET)
-	public @ResponseBody Respuesta<List<UserChunks>> getRetrievalPlan(@PathVariable String videoId){
+	@RequestMapping(value="{videoId}/{userId}", method = RequestMethod.GET)
+	public @ResponseBody Respuesta<List<UserChunks>> getRetrievalPlan(@PathVariable String videoId, @PathVariable String userId){
 		log.info("returning grafo for video: " + videoId);
-		return new Respuesta<List<UserChunks>>(tracking.grafo(videoId));
+		return new Respuesta<List<UserChunks>>(tracking.grafo(videoId, userId));
 	}
 
 }
