@@ -2,11 +2,11 @@ package in.di.ce;
 
 import java.io.Serializable;
 
+import lombok.Getter;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
-
-import lombok.Getter;
 
 public class Cacho implements Serializable{
 

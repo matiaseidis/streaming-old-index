@@ -2,10 +2,10 @@ package in.di.ce;
 
 import java.io.Serializable;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
-
 import lombok.Getter;
 import lombok.Setter;
+
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class User implements Serializable{
 

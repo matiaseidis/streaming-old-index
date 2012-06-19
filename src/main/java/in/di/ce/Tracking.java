@@ -3,10 +3,8 @@ package in.di.ce;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -93,7 +91,6 @@ public class Tracking implements Serializable {
 		/*
 		 * userId:[chunkOrdinals]
 		 */
-		//		Map<String, List<Integer>> chunks = new HashMap<String, List<Integer>>();
 		Map<String, UserChunks> userChunks = new HashMap<String, UserChunks>();
 
 		if(usersWithChunks.containsKey(userId) && CollectionUtils.isNotEmpty(usersWithChunks.get(userId))){
@@ -165,7 +162,6 @@ public class Tracking implements Serializable {
 					if(!usersWithChunks.get(userId).contains(current) || current == max) {
 						usersToRequest.remove(user);
 						return result;
-//						break;
 					}
 					result.addChunk(current);
 					current++;

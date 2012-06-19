@@ -1,7 +1,6 @@
 package in.di.ce.prevalence;
 
 import in.di.ce.Tracking;
-import in.di.ce.User;
 import lombok.Getter;
 import lombok.Setter;
 

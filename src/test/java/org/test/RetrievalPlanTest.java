@@ -3,9 +3,7 @@ package org.test;
 import in.di.ce.Tracking;
 import in.di.ce.UserChunks;
 import in.di.ce.Video;
-import in.di.ce.service.PlanService;
 import in.di.ce.service.VideoService;
-import in.di.ce.service.rta.Respuesta;
 
 import java.util.Arrays;
 import java.util.List;
