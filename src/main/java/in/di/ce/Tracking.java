@@ -3,8 +3,10 @@ package in.di.ce;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -101,6 +103,7 @@ public class Tracking implements Serializable {
 		Video video = this.getVideo(videoId);
 
 		List<UserChunks> userChunkList = new ArrayList<UserChunks>();
+		List<String> usersRequested = new ArrayList<String>(usersWithChunks.keySet());
 
 		for(int i = 0; i<video.getChunks().size(); i++) {
 			if(thisUserChunks.getChunks().contains(i)) {
@@ -108,7 +111,19 @@ public class Tracking implements Serializable {
 				userChunkList.add(uc);
 				i+=uc.getChunks().size();
 			} else {
-				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks);
+				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersRequested);
+				
+				if(poorUserChunks == null){
+					/*
+					 * no chunks for this set of users, call again but with all users
+					 */
+					usersRequested = new ArrayList<String>(usersWithChunks.keySet());
+					poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersRequested);
+					
+					if(poorUserChunks == null){
+						throw new IllegalStateException("Unable to complete retrieval plan for video: "+videoId+" for user : "+userId +" - Users requested: "+usersRequested);
+					}
+				}
 				userChunkList.add(poorUserChunks);
 				i+=poorUserChunks.getChunks().size();
 			}
@@ -125,23 +140,27 @@ public class Tracking implements Serializable {
 		return userChunkList;
 
 	}
-	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks) {
+	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks, List<String> usersRequested) {
 
 		int max = i == 0 ? MAX_FIRST_CACHO_SIZE : MAX_CACHO_SIZE;
+		String user = null;
+		UserChunks result = null;
 
 		//[userId: to]
 		Map<String, Integer> temp = new HashMap<String, Integer>();
 		int minor = -1;
-		for(Map.Entry<String, List<Integer>> entry: usersWithChunks.entrySet()) {
-			if(entry.getValue().contains(i)){
+		
+		for(String userId : usersRequested) {
+			if(usersWithChunks.get(userId).contains(i)) {
 				int current = i++;
 				while(true) {
-					if(!entry.getValue().contains(current) || current == max) {
+					if(!usersWithChunks.get(userId).contains(current) || current == max) {
 						break;
 					}
 					current++;
 				}
-				temp.put(entry.getKey(), current);
+				temp.put(userId, current);
+				user = userId;
 				if(minor == -1) {
 					minor = current;
 				} 
@@ -155,16 +174,17 @@ public class Tracking implements Serializable {
 			if(entry.getValue() == minor){
 				UserChunks uc = new UserChunks(entry.getKey(), new ArrayList<Integer>());
 				for(int ordinal = 0; ordinal < minor; ordinal++) {
-					uc.getChunks().add(ordinal);
+					uc.getChunks().add(minor+ordinal);
 				}
-				return uc;
+				usersRequested.remove(user);
+				result = uc;
 			}
 		}
-		return null;
+		return result;
 	}
 
 	private UserChunks segmentFrom(int from, UserChunks thisUserChunks) {
-		UserChunks result = new UserChunks(thisUserChunks.getUserId(), new ArrayList());
+		UserChunks result = new UserChunks(thisUserChunks.getUserId(), new ArrayList<Integer>());
 		result.getChunks().add(from);
 		int current = from++;
 		while(true) {
