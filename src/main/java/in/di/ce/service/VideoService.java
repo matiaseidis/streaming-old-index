@@ -140,6 +140,10 @@ public class VideoService {
 			int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
 			String chunkId = splittedChunk[1];
 
+			if(chunkOrdinal > video.getChunks().size()) {
+				throw new IllegalArgumentException("Trying to register chunk that is beyond video's size");
+			}
+			
 			if(video.getChunks().get(chunkOrdinal) != null && video.getChunks().get(chunkOrdinal).equals(chunkId)){
 				result.add(chunkOrdinal);
 			}

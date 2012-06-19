@@ -34,7 +34,11 @@ public class Tracking implements Serializable {
 	private final ConcurrentMap<String, Map<String, List<Integer>>> usersLocalRepoTracking = new ConcurrentHashMap<String, Map<String,List<Integer>>>();
 
 	public boolean registerVideo(Video video){
-		return videos.putIfAbsent(video.getId(), video) == null;
+		boolean newVideo = videos.putIfAbsent(video.getId(), video) == null; 
+		if(newVideo) {
+			usersLocalRepoTracking.put(video.getId(), new HashMap<String, List<Integer>>());
+		}
+		return newVideo;
 	}
 
 	public boolean registerChunks(String videoId, String userId, List<Integer> chunks){
@@ -84,8 +88,8 @@ public class Tracking implements Serializable {
 			return null;
 		}
 
-		UserChunks thisUserChunks = new UserChunks(userId, new ArrayList<Integer>());
 
+		UserChunks thisUserChunks = new UserChunks(userId, new ArrayList<Integer>());
 		/*
 		 * userId:[chunkOrdinals]
 		 */
@@ -103,25 +107,25 @@ public class Tracking implements Serializable {
 		Video video = this.getVideo(videoId);
 
 		List<UserChunks> userChunkList = new ArrayList<UserChunks>();
-		List<String> usersRequested = new ArrayList<String>(usersWithChunks.keySet());
+		
+		List<String> usersToRequest = usersToRequest(usersWithChunks, userId);
 
-		for(int i = 0; i<video.getChunks().size(); i++) {
+		for(int i = 0; i<video.getChunks().size(); /*i++*/) {
 			if(thisUserChunks.getChunks().contains(i)) {
 				UserChunks uc = segmentFrom(i, thisUserChunks);
 				userChunkList.add(uc);
 				i+=uc.getChunks().size();
 			} else {
-				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersRequested);
+				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersToRequest);
 				
 				if(poorUserChunks == null){
 					/*
 					 * no chunks for this set of users, call again but with all users
 					 */
-					usersRequested = new ArrayList<String>(usersWithChunks.keySet());
-					poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersRequested);
+					poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersToRequest(usersWithChunks, userId));
 					
 					if(poorUserChunks == null){
-						throw new IllegalStateException("Unable to complete retrieval plan for video: "+videoId+" for user : "+userId +" - Users requested: "+usersRequested);
+						throw new IllegalStateException("Unable to complete retrieval plan for video: "+videoId+" for user : "+userId +" - Users requested: "+usersToRequest);
 					}
 				}
 				userChunkList.add(poorUserChunks);
@@ -140,58 +144,46 @@ public class Tracking implements Serializable {
 		return userChunkList;
 
 	}
-	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks, List<String> usersRequested) {
+	private List<String> usersToRequest(
+			Map<String, List<Integer>> usersWithChunks, String userId) {
+		List<String> usersToRequest = new ArrayList<String>(usersWithChunks.keySet());
+		usersToRequest.remove(userId);
+		return usersToRequest;
+	}
+
+	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks, List<String> usersToRequest) {
 
 		int max = i == 0 ? MAX_FIRST_CACHO_SIZE : MAX_CACHO_SIZE;
 		String user = null;
 		UserChunks result = null;
-
-		//[userId: to]
-		Map<String, Integer> temp = new HashMap<String, Integer>();
-		int minor = -1;
 		
-		for(String userId : usersRequested) {
+		for(String userId : usersToRequest) {
 			if(usersWithChunks.get(userId).contains(i)) {
-				int current = i++;
+				result = new UserChunks(userId);
+				int current = i;
 				while(true) {
 					if(!usersWithChunks.get(userId).contains(current) || current == max) {
-						break;
+						usersToRequest.remove(user);
+						return result;
+//						break;
 					}
+					result.addChunk(current);
 					current++;
 				}
-				temp.put(userId, current);
-				user = userId;
-				if(minor == -1) {
-					minor = current;
-				} 
-				if(minor > current) {
-					minor = current;
-				} 
 			}
 		}
-
-		for(Map.Entry<String, Integer> entry : temp.entrySet()){
-			if(entry.getValue() == minor){
-				UserChunks uc = new UserChunks(entry.getKey(), new ArrayList<Integer>());
-				for(int ordinal = 0; ordinal < minor; ordinal++) {
-					uc.getChunks().add(minor+ordinal);
-				}
-				usersRequested.remove(user);
-				result = uc;
-			}
-		}
-		return result;
+		throw new IllegalStateException("unable to build cacho");
 	}
 
 	private UserChunks segmentFrom(int from, UserChunks thisUserChunks) {
 		UserChunks result = new UserChunks(thisUserChunks.getUserId(), new ArrayList<Integer>());
-		result.getChunks().add(from);
-		int current = from++;
+		int current = from;
 		while(true) {
 			if(!thisUserChunks.getChunks().contains(current)) {
 				break;
 			}
 			result.getChunks().add(current);
+			current++;
 		}
 		return result;
 	}
