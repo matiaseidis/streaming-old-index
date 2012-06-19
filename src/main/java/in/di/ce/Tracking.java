@@ -15,7 +15,9 @@ import org.apache.commons.logging.LogFactory;
 
 public class Tracking implements Serializable {
 	
-	private static final Log log = LogFactory.getLog(Tracking.class); 
+	private static final Log log = LogFactory.getLog(Tracking.class);
+
+	private static final int MAX_CACHO_SIZE = 64; 
 
 	/*
 	 * videos repository
@@ -84,7 +86,7 @@ public class Tracking implements Serializable {
 		/*
 		 * userId:[chunkOrdinals]
 		 */
-		Map<String, List<Integer>> chunks = new HashMap<String, List<Integer>>();
+//		Map<String, List<Integer>> chunks = new HashMap<String, List<Integer>>();
 		Map<String, UserChunks> userChunks = new HashMap<String, UserChunks>();
 		
 		if(usersWithChunks.containsKey(userId) && CollectionUtils.isNotEmpty(usersWithChunks.get(userId))){
@@ -95,30 +97,81 @@ public class Tracking implements Serializable {
 			userChunks.put(userId, thisUserChunks);
 		}
 		
-		for(Map.Entry<String, List<Integer>> entry : usersWithChunks.entrySet()){
-			if(CollectionUtils.isNotEmpty(entry.getValue()) && !entry.getKey().equals(userId)){
-				for(Integer chunkOrdinal : entry.getValue()){
-					if(!thisUserChunks.getChunks().contains(chunkOrdinal)){
-						
-//						TODO el usuario con el conjunto de chunks consecutivos mas corto desde el ordinal actual
-						// necesito recorrer de otra manera la lista de chunks (por orden natural de chunk ordinal)
-//						String poorUserId = getUserWithShortSegmentFrom(ordinalActual, usersWithChunks);
-						
-						
-						if(chunks.get(entry.getKey()) == null){
-							chunks.put(entry.getKey(), new ArrayList<Integer>());
-						}
-						chunks.get(entry.getKey()).add(chunkOrdinal);
-					}
-				}
+		Video video = this.getVideo(videoId);
+		
+		List<UserChunks> userChunkList = new ArrayList<UserChunks>();
+		
+		for(int i = 0; i<video.getChunks().size(); i++) {
+			if(thisUserChunks.getChunks().contains(i)) {
+				UserChunks uc = segmentFrom(i, thisUserChunks);
+				userChunkList.add(uc);
+				i+=uc.getChunks().size();
+			} else {
+				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks);
+				userChunkList.add(poorUserChunks);
+				i+=poorUserChunks.getChunks().size();
 			}
 		}
 		
-		for(Map.Entry<String, List<Integer>> entry : chunks.entrySet()){
-			userChunks.put(entry.getKey(), new UserChunks(entry.getKey(), entry.getValue()));
+		int total = 0;
+		for(UserChunks uc : userChunkList){
+			total+=uc.getChunks().size();
 		}
-		return new ArrayList<UserChunks>(userChunks.values());
+		if(total != video.getChunks().size()) {
+			log.error("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId +" - not enough sources available");
+			throw new IllegalStateException("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId+" - not enough sources available");
+		}
+		return userChunkList;
+
 	}
+private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks) {
+	
+	//[userId: to]
+	Map<String, Integer> temp = new HashMap<String, Integer>();
+	int minor = -1;
+	for(Map.Entry<String, List<Integer>> entry: usersWithChunks.entrySet()) {
+		if(entry.getValue().contains(i)){
+			int current = i++;
+			while(true) {
+				if(!entry.getValue().contains(current) || current == MAX_CACHO_SIZE) {
+					break;
+				}
+				current++;
+			}
+			temp.put(entry.getKey(), current);
+			if(minor == -1) {
+				minor = current;
+			} 
+			if(minor > current) {
+				minor = current;
+			} 
+		}
+	}
+
+	for(Map.Entry<String, Integer> entry : temp.entrySet()){
+		if(entry.getValue() == minor){
+			UserChunks uc = new UserChunks(entry.getKey(), new ArrayList<Integer>());
+			for(int ordinal = 0; ordinal < minor; ordinal++) {
+				uc.getChunks().add(ordinal);
+			}
+			return uc;
+		}
+	}
+	return null;
+	}
+
+private UserChunks segmentFrom(int from, UserChunks thisUserChunks) {
+	UserChunks result = new UserChunks(thisUserChunks.getUserId(), new ArrayList());
+	result.getChunks().add(from);
+	int current = from++;
+	while(true) {
+		if(!thisUserChunks.getChunks().contains(current)) {
+			break;
+		}
+		result.getChunks().add(current);
+	}
+	return result;
+}
 
 	public String getVideoIdFromFilename(String fileName) {
 		
