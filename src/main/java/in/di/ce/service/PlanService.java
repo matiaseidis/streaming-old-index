@@ -1,10 +1,13 @@
 package in.di.ce.service;
 
+import in.di.ce.RetrievalPlan;
 import in.di.ce.Tracking;
+import in.di.ce.UserCacho;
 import in.di.ce.UserChunks;
 import in.di.ce.prevalence.BaseModel;
 import in.di.ce.service.rta.Respuesta;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
@@ -23,17 +26,16 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("plan")
 public class PlanService {
 
-
 	private static final Log log = LogFactory.getLog(PlanService.class); 
-
-	@Autowired @Setter @Getter private Tracking tracking;
 
 	@Autowired @Setter @Getter private BaseModel baseModel;
 
 	@RequestMapping(value="{videoId}/{userId}", method = RequestMethod.GET)
-	public @ResponseBody Respuesta<List<UserChunks>> getRetrievalPlan(@PathVariable String videoId, @PathVariable String userId){
-		log.info("returning grafo for video: " + videoId);
-		return new Respuesta<List<UserChunks>>(tracking.grafo(videoId, userId));
+	public @ResponseBody Respuesta<RetrievalPlan> getRetrievalPlan(@PathVariable String videoId, @PathVariable String userId){
+		
+		log.info("About to build retrieval plan for video: " + videoId);
+		RetrievalPlan retrievalPlan = baseModel.getModel().grafo(videoId, userId); 
+		log.info("Returning retrieval plan for video: " + videoId);
+		return new Respuesta<RetrievalPlan>(retrievalPlan);
 	}
-
 }

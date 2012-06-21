@@ -15,11 +15,19 @@ import org.apache.commons.logging.LogFactory;
 
 public class Tracking implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	private static final Log log = LogFactory.getLog(Tracking.class);
 
-	private static final int MAX_FIRST_CACHO_SIZE = 32;
-	private static final int MAX_CACHO_SIZE = 64; 
+	private int maxFirstCachoSize = 32;
+	private int maxCachoSize = 64; 
+	private long chunkSize = 1024 * 1024;
 
+	private final Map<String, User> users = new HashMap<String, User>();
+	
 	/*
 	 * videos repository
 	 */
@@ -30,6 +38,7 @@ public class Tracking implements Serializable {
 	 * [videoId:[userId:[chunks]]]
 	 */
 	private final ConcurrentMap<String, Map<String, List<Integer>>> usersLocalRepoTracking = new ConcurrentHashMap<String, Map<String,List<Integer>>>();
+
 
 	public boolean registerVideo(Video video){
 		boolean newVideo = videos.putIfAbsent(video.getId(), video) == null; 
@@ -77,7 +86,7 @@ public class Tracking implements Serializable {
 		return videos.get(videoId);
 	}
 
-	public List<UserChunks> grafo(String videoId, String userId) {
+	public RetrievalPlan grafo(String videoId, String userId) {
 
 		Map<String, List<Integer>> usersWithChunks = usersLocalRepoTracking.get(videoId);
 
@@ -103,14 +112,14 @@ public class Tracking implements Serializable {
 
 		Video video = this.getVideo(videoId);
 
-		List<UserChunks> userChunkList = new ArrayList<UserChunks>();
+		List<UserChunks> userChunksList = new ArrayList<UserChunks>();
 		
 		List<String> usersToRequest = usersToRequest(usersWithChunks, userId);
 
 		for(int i = 0; i<video.getChunks().size(); /*i++*/) {
 			if(thisUserChunks.getChunks().contains(i)) {
 				UserChunks uc = segmentFrom(i, thisUserChunks);
-				userChunkList.add(uc);
+				userChunksList.add(uc);
 				i+=uc.getChunks().size();
 			} else {
 				UserChunks poorUserChunks = getShorterUserChunksFrom(i, usersWithChunks, usersToRequest);
@@ -125,22 +134,67 @@ public class Tracking implements Serializable {
 						throw new IllegalStateException("Unable to complete retrieval plan for video: "+videoId+" for user : "+userId +" - Users requested: "+usersToRequest);
 					}
 				}
-				userChunkList.add(poorUserChunks);
+				userChunksList.add(poorUserChunks);
 				i+=poorUserChunks.getChunks().size();
 			}
 		}
 
 		int total = 0;
-		for(UserChunks uc : userChunkList){
+		for(UserChunks uc : userChunksList){
 			total+=uc.getChunks().size();
 		}
 		if(total != video.getChunks().size()) {
 			log.error("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId +" - not enough sources available");
 			throw new IllegalStateException("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId+" - not enough sources available");
 		}
-		return userChunkList;
+		return retrievalPlanFor(video, cachosFrom(userChunksList, video));
 
 	}
+	
+	private RetrievalPlan retrievalPlanFor(Video video,
+			List<UserCacho> userCachos) {
+		RetrievalPlan rp = new RetrievalPlan(video, userCachos); 
+		return rp;
+	}
+
+	private List<UserCacho> cachosFrom(List<UserChunks> chunks, Video video) {
+
+		List<UserCacho> result = new ArrayList<UserCacho>();
+		for(UserChunks uc : chunks) {
+			result.add(new UserCacho(this.loadUser(uc.getUserId()), cachoFromUserChunks(uc, video)));
+		}
+		return result;
+	}
+
+	private Cacho cachoFromUserChunks(UserChunks uc, Video video) {
+		
+		int first = uc.getChunks().get(0);
+		int last = first + uc.getChunks().size();
+		boolean lastCacho = last == video.getChunks().size();
+		
+		long from = first * chunkSize;
+		long lenght;
+		if(lastCacho) {
+			lenght = (last - first - 1) * chunkSize + video.getLenght() % chunkSize;
+		} else {
+			lenght = ((last - first)) * chunkSize;
+		} 
+		Cacho cacho = new Cacho(from, lenght);
+		
+		return cacho;
+	}
+
+	private User loadUser(String userId) {
+		
+		if(this.users.get(userId)!= null){
+			throw new RuntimeException("Hay que implementar esto");
+		}
+		/*
+		 * FIXME implementar alta de usuarios y validaciones en el flujo
+		 */
+		return new User(userId, "localhost", 10002);
+	}
+
 	private List<String> usersToRequest(
 			Map<String, List<Integer>> usersWithChunks, String userId) {
 		List<String> usersToRequest = new ArrayList<String>(usersWithChunks.keySet());
@@ -150,7 +204,7 @@ public class Tracking implements Serializable {
 
 	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks, List<String> usersToRequest) {
 
-		int max = i == 0 ? MAX_FIRST_CACHO_SIZE : MAX_CACHO_SIZE;
+		int max = i == 0 ? maxFirstCachoSize : maxCachoSize;
 		String user = null;
 		UserChunks result = null;
 		
