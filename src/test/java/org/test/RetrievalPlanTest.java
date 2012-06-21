@@ -20,8 +20,8 @@ public class RetrievalPlanTest {
 	private String fileName = "test-file-name";
 
 	private long chunkSize = 1024*1024;
-	private long lastChunkSize = 450;//bytes
-	private long videoLenght = chunkSize *400 + lastChunkSize;
+	private long lastChunkSize = chunkSize/2;//bytes
+	private long videoLenght = chunkSize * 400 + lastChunkSize;
 	private String chunkSeparator = "!";
 	private String chunkForRegisterSeparator = "&";
 	
@@ -37,11 +37,26 @@ public class RetrievalPlanTest {
 
 		Tracking tracking = new Tracking();
 		registerNewVideo(tracking);
-		
 		registerChunks(userId_1, 0, 99, tracking);
 		registerChunks(userId_2, 100, 199, tracking);
 		registerChunks(userId_3, 200, 299, tracking);
-		registerChunks(userId_4, 300, 399, tracking);
+		registerChunks(userId_4, 300, 400, tracking);
+
+		
+		/*
+		 * load user cachos   
+		 */
+		List<Integer> chunks = tracking.getChunksFrom(videoId, userId_1);
+		Assert.assertEquals(userId_1, chunks.size(), 100);
+		
+		chunks = tracking.getChunksFrom(videoId, userId_2);
+		Assert.assertEquals(userId_2, chunks.size(), 100);
+		
+		chunks = tracking.getChunksFrom(videoId, userId_3);
+		Assert.assertEquals(userId_3, chunks.size(), 100);
+		
+		chunks = tracking.getChunksFrom(videoId, userId_4);
+		Assert.assertEquals(userId_4, chunks.size(), 101);
 		
 		/*
 		 * retrieve plan
@@ -51,21 +66,26 @@ public class RetrievalPlanTest {
 		Assert.assertNotNull(retrievalPlan);
 		List<UserCacho> userCachos = retrievalPlan.getUserCachos(); 
 
-		Assert.assertEquals(chunkSize*5, userCachos.get(0).getCacho().getLenght());
-		Assert.assertEquals(chunkSize*5, userCachos.get(1).getCacho().getLenght());
-		Assert.assertEquals(lastChunkSize, userCachos.get(2).getCacho().getLenght());
-		
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(0).getUser().getId().equals(userId_1));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(1).getUser().getId().equals(userId_2));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(2).getUser().getId().equals(userId_3));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(3).getUser().getId().equals(userId_4));
 		Assert.assertTrue(retrievalPlan.getUserCachos().size() == 4);
+
+		Assert.assertEquals(chunkSize*100, userCachos.get(0).getCacho().getLenght());
+		Assert.assertEquals(chunkSize*100, userCachos.get(1).getCacho().getLenght());
+		Assert.assertEquals(chunkSize*100, userCachos.get(2).getCacho().getLenght());
+		Assert.assertEquals(chunkSize*100+lastChunkSize, userCachos.get(3).getCacho().getLenght());
+		
 		
 		/*
 		 * registro el mismo chunk que registre con el user 4, con el user 1, que es el que pide el plan.
 		 * El plan deberia ignorar al user 4
 		 */
-		registerChunks(userId_1, 300, 399, tracking);
+		registerChunks(userId_1, 300, 400, tracking);
+		
+		chunks = tracking.getChunksFrom(videoId, userId_1);
+		Assert.assertEquals(userId_1, chunks.size(), 201);
 		/*
 		 * retrieve plan
 		 */
@@ -76,7 +96,7 @@ public class RetrievalPlanTest {
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(1).getUser().getId().equals(userId_2));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(2).getUser().getId().equals(userId_3));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(3).getUser().getId().equals(userId_1));
-		Assert.assertTrue(retrievalPlan.getUserCachos().size() == 4);
+		Assert.assertEquals(4, retrievalPlan.getUserCachos().size());
 	}
 	
 	
@@ -90,16 +110,6 @@ public class RetrievalPlanTest {
 		
 		System.out.println("Chunks from "+from+" to "+to+" for user "+userId+": "+chunksForRegisterByUser);
 		Assert.assertTrue(tracking.registerChunks(videoId, userId, chunkOrdinalsForExistentVideo(tracking, chunksForRegisterByUser)));
-		
-		/*
-		 * load user cachos   
-		 */
-		List<Integer> chunks = tracking.getChunksFrom(videoId, userId);
-		
-		for(int i = from; i<=to; i++){
-			Assert.assertTrue(chunks.contains(i));
-		}
-		Assert.assertEquals(chunks.size(), (to-from)+1);
 	}
 
 

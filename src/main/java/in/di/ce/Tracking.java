@@ -168,17 +168,15 @@ public class Tracking implements Serializable {
 
 	private Cacho cachoFromUserChunks(UserChunks uc, Video video) {
 		
-		int first = uc.getChunks().get(0);
-		int last = first + uc.getChunks().size();
-		boolean lastCacho = last == video.getChunks().size();
+		long from =  uc.getChunks().get(0) * chunkSize;
+		long lenght = uc.getChunks().size() * chunkSize;
 		
-		long from = first * chunkSize;
-		long lenght;
-		if(lastCacho) {
-			lenght = (last - first - 1) * chunkSize + video.getLenght() % chunkSize;
-		} else {
-			lenght = ((last - first)) * chunkSize;
-		} 
+		boolean lastCacho = (uc.getChunks().get(uc.getChunks().size()-1)) == video.getChunks().size()-1;
+		
+		if(lastCacho){
+			long diff  = chunkSize - (video.getLenght() % chunkSize);
+			lenght-= diff;
+		}
 		Cacho cacho = new Cacho(from, lenght);
 		
 		return cacho;
