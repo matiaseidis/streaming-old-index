@@ -1,15 +1,8 @@
 package in.di.ce.service;
 
 import in.di.ce.RetrievalPlan;
-import in.di.ce.Tracking;
-import in.di.ce.UserCacho;
-import in.di.ce.UserChunks;
 import in.di.ce.prevalence.BaseModel;
 import in.di.ce.service.rta.Respuesta;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,7 +27,7 @@ public class PlanService {
 	public @ResponseBody Respuesta<RetrievalPlan> getRetrievalPlan(@PathVariable String videoId, @PathVariable String userId){
 		
 		log.info("About to build retrieval plan for video: " + videoId);
-		RetrievalPlan retrievalPlan = baseModel.getModel().grafo(videoId, userId); 
+		RetrievalPlan retrievalPlan = baseModel.getModel().plan(videoId, userId); 
 		log.info("Returning retrieval plan for video: " + videoId);
 		return new Respuesta<RetrievalPlan>(retrievalPlan);
 	}

@@ -10,12 +10,15 @@ import in.di.ce.service.rta.Respuesta;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,7 +72,7 @@ public class VideoService {
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
 	@RequestMapping(value="registerChunks/{fileName}/{userId}/{chunks}", method = RequestMethod.GET)
-	public Respuesta<Boolean> registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
+	public Map<Integer, String> registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
 
 		if(StringUtils.isEmpty(fileName)){
 			throw new IllegalArgumentException("File name can not be null nor empty");
@@ -78,42 +81,41 @@ public class VideoService {
 		if(StringUtils.isEmpty(videoId)){
 			throw new IllegalArgumentException("No video id for file "+fileName+" in central repository");
 		}
-		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
-		if(CollectionUtils.isEmpty(chunkOrdinals)){
+		Map<Integer, String> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
+		if(MapUtils.isEmpty(chunkOrdinals)){
 			throw new IllegalArgumentException("No chunks passed for register for file: "+fileName+" - id: "+videoId);
 		}
 		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
 
-		boolean registered = false;
 		try {
-			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new RegisterChunks(videoId, userId, chunkOrdinals));
+			this.getBaseModel().getPrevayler().execute(new RegisterChunks(videoId, userId, new ArrayList(chunkOrdinals.keySet())));
 		} catch (Exception e) {
 			log.error("unable to register chunks "+ userId +" - "+videoId+" - "+chunks, e);
 		}
 
-		return new Respuesta(registered);
+		return chunkOrdinals;
 	}
 	/*
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
 	@RequestMapping(value="unregisterChunks/{fileName}/{userId}/{from}/{lenght}", method = RequestMethod.GET)
-	public Respuesta<Boolean> unregisterChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
+	public Map<Integer, String> unregisterChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
 
 		if(StringUtils.isEmpty(fileName)){
 			throw new IllegalArgumentException("File name can not be null nor empty");
 		}
 		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
-		List<Integer> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
+		Map<Integer, String> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
 		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
-		boolean registered = false;
+
 		try {
-			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new UnregisterChunks(videoId, userId, chunkOrdinals));
+			this.getBaseModel().getPrevayler().execute(new UnregisterChunks(videoId, userId, new ArrayList(chunkOrdinals.keySet())));
 		} catch (Exception e) {
 			log.error("unable to unregister chunks "+ userId +" - "+videoId+" - "+chunks, e);
 		}
 
-		return new Respuesta(registered);
+		return chunkOrdinals;
 	}
 
 
@@ -126,15 +128,15 @@ public class VideoService {
 		return baseModel.getModel().getVideo(videoId).getChunks(); 
 	}
 
-	public List<Integer> chunkOrdinalsForExistentVideo(Tracking tracking, String videoId, String chunks) {
+	public Map<Integer, String> chunkOrdinalsForExistentVideo(Tracking tracking, String videoId, String chunks) {
 
 		if(!tracking.videoExist(videoId)){
 			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
 		}
 		Video video = tracking.getVideo(videoId);
 
-		List<Integer> result = new ArrayList<Integer>();
-
+		Map<Integer, String> result = new HashMap<Integer, String>();
+		
 		for(String chunk : chunks.split("\\&")){
 			String[] splittedChunk = chunk.split("!");
 			int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
@@ -145,12 +147,13 @@ public class VideoService {
 			}
 			
 			if(video.getChunks().get(chunkOrdinal) != null && video.getChunks().get(chunkOrdinal).equals(chunkId)){
-				result.add(chunkOrdinal);
-			}
+				result.put(chunkOrdinal, chunkId);
+			} 
 		}
-		if(CollectionUtils.isEmpty(result)){
+		if(MapUtils.isEmpty(result)){
 			throw new IllegalArgumentException("no valid chunks passed for video: " + videoId);
 		}
+		
 		return result;
 	}
 
@@ -161,3 +164,4 @@ public class VideoService {
 	}
 
 }
+

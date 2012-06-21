@@ -41,7 +41,6 @@ public class RetrievalPlanTest {
 		registerChunks(userId_2, 100, 199, tracking);
 		registerChunks(userId_3, 200, 299, tracking);
 		registerChunks(userId_4, 300, 400, tracking);
-
 		
 		/*
 		 * load user cachos   
@@ -61,7 +60,7 @@ public class RetrievalPlanTest {
 		/*
 		 * retrieve plan
 		 */
-		RetrievalPlan retrievalPlan = tracking.grafo(videoId, userId_1);
+		RetrievalPlan retrievalPlan = tracking.plan(videoId, userId_1);
 		
 		Assert.assertNotNull(retrievalPlan);
 		List<UserCacho> userCachos = retrievalPlan.getUserCachos(); 
@@ -88,7 +87,7 @@ public class RetrievalPlanTest {
 		/*
 		 * retrieve plan
 		 */
-		retrievalPlan = tracking.grafo(videoId, userId_1);
+		retrievalPlan = tracking.plan(videoId, userId_1);
 		
 		Assert.assertNotNull(retrievalPlan);
 		Assert.assertEquals(5, retrievalPlan.getUserCachos().size());
@@ -110,7 +109,7 @@ public class RetrievalPlanTest {
 		/*
 		 * retrieve plan
 		 */
-		retrievalPlan = tracking.grafo(videoId, userId_1);
+		retrievalPlan = tracking.plan(videoId, userId_1);
 		
 		Assert.assertNotNull(retrievalPlan);
 		Assert.assertEquals(4, retrievalPlan.getUserCachos().size());
@@ -151,7 +150,9 @@ public class RetrievalPlanTest {
 
 
 	private List<Integer> chunkOrdinalsForExistentVideo(Tracking tracking, String chunks) {
-		return new VideoService().chunkOrdinalsForExistentVideo(tracking, videoId, chunks);
+		return new ArrayList<Integer>(
+				new VideoService().chunkOrdinalsForExistentVideo(tracking, videoId, chunks).keySet()
+				);
 	}
 
 }

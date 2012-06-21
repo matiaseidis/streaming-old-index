@@ -86,7 +86,7 @@ public class Tracking implements Serializable {
 		return videos.get(videoId);
 	}
 
-	public RetrievalPlan grafo(String videoId, String userId) {
+	public RetrievalPlan plan(String videoId, String userId) {
 
 		Map<String, List<Integer>> usersWithChunks = usersLocalRepoTracking.get(videoId);
 
