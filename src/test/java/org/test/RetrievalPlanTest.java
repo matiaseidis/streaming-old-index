@@ -77,12 +77,33 @@ public class RetrievalPlanTest {
 		Assert.assertEquals(chunkSize*100, userCachos.get(2).getCacho().getLenght());
 		Assert.assertEquals(chunkSize*100+lastChunkSize, userCachos.get(3).getCacho().getLenght());
 		
+		/*
+		 * registro el mismo chunk que registre con el user 4, con el user 1, que es el que pide el plan.
+		 * El plan deberia ignorar al user 4 hasta el ultimo chunk
+		 */
+		registerChunks(userId_1, 300, 399, tracking);
+		
+		chunks = tracking.getChunksFrom(videoId, userId_1);
+		Assert.assertEquals(userId_1, chunks.size(), 200);
+		/*
+		 * retrieve plan
+		 */
+		retrievalPlan = tracking.grafo(videoId, userId_1);
+		
+		Assert.assertNotNull(retrievalPlan);
+		Assert.assertEquals(5, retrievalPlan.getUserCachos().size());
+		Assert.assertTrue(retrievalPlan.getUserCachos().get(0).getUser().getId().equals(userId_1));
+		Assert.assertTrue(retrievalPlan.getUserCachos().get(1).getUser().getId().equals(userId_2));
+		Assert.assertTrue(retrievalPlan.getUserCachos().get(2).getUser().getId().equals(userId_3));
+		Assert.assertTrue(retrievalPlan.getUserCachos().get(3).getUser().getId().equals(userId_1));
+		Assert.assertTrue(retrievalPlan.getUserCachos().get(4).getUser().getId().equals(userId_4));
+		
 		
 		/*
 		 * registro el mismo chunk que registre con el user 4, con el user 1, que es el que pide el plan.
-		 * El plan deberia ignorar al user 4
+		 * El plan deberia ignorar al user 4 por completo
 		 */
-		registerChunks(userId_1, 300, 400, tracking);
+		registerChunks(userId_1, 400, 400, tracking);
 		
 		chunks = tracking.getChunksFrom(videoId, userId_1);
 		Assert.assertEquals(userId_1, chunks.size(), 201);
@@ -92,11 +113,11 @@ public class RetrievalPlanTest {
 		retrievalPlan = tracking.grafo(videoId, userId_1);
 		
 		Assert.assertNotNull(retrievalPlan);
+		Assert.assertEquals(4, retrievalPlan.getUserCachos().size());
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(0).getUser().getId().equals(userId_1));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(1).getUser().getId().equals(userId_2));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(2).getUser().getId().equals(userId_3));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(3).getUser().getId().equals(userId_1));
-		Assert.assertEquals(4, retrievalPlan.getUserCachos().size());
 	}
 	
 	
