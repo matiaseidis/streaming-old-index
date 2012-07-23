@@ -38,7 +38,6 @@ public class VideoService {
 
 	private static final Log log = LogFactory.getLog(VideoService.class); 
 
-	//	@Autowired @Setter @Getter private Tracking tracking;
 	@Autowired @Setter @Getter private BaseModel baseModel;
 
 	/**
@@ -102,8 +101,7 @@ public class VideoService {
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
-//	localhost:9000/video/registerChunks/0000179564.flv/demo-user-0/0!14ed453e2706e1d43cbd4753199537b8c381678e
-	@RequestMapping(value="registerChunks/{fileName}/{userId}/{chunks}", method = RequestMethod.GET)
+	@RequestMapping(value="registerChunks/{fileName}/{userId}/{chunks}", method = RequestMethod.POST)
 	public @ResponseBody Respuesta registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
 		
 		if(StringUtils.isEmpty(fileName)){

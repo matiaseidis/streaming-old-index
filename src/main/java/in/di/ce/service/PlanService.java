@@ -5,9 +5,6 @@ import in.di.ce.prevalence.BaseModel;
 import in.di.ce.service.rta.Ok;
 import in.di.ce.service.rta.Respuesta;
 import in.di.ce.service.rta.TodoMal;
-
-import java.util.Set;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -32,23 +29,17 @@ public class PlanService {
 	@RequestMapping(value="{videoId}/{userId}", method = RequestMethod.GET)
 	public @ResponseBody Respuesta<RetrievalPlan> getRetrievalPlan(@PathVariable String videoId, @PathVariable String userId){
 
-		System.out.println("retrieval plan requested");
-		System.out.println(baseModel.getModel().getChunksFrom(videoId, userId));
-		Set<Integer> chunks = baseModel.getModel().getChunksFrom(videoId, userId);
-		if(CollectionUtils.isNotEmpty(chunks)){
-			for(int i : chunks) {
-				System.out.println(userId+" -> "+i);
-			}
-		} else {
-			log.error("no chunks in index for user "+userId);
+		log.debug("Retrieval plan requested by user: "+userId+" for video: "+videoId);
+		if(CollectionUtils.isEmpty(baseModel.getModel().getChunksFrom(videoId, userId))){
+			log.debug("no chunks in index for requester user "+userId);
 		}
 		
-		log.info("About to build retrieval plan for video: " + videoId);
 		RetrievalPlan retrievalPlan = baseModel.getModel().plan(videoId, userId); 
-		log.info("Returning retrieval plan for video: " + videoId);
 		if(retrievalPlan != null) {
+			log.info("Returning retrieval plan for video: " + videoId);
 			return new Ok<RetrievalPlan>(retrievalPlan);
 		} 
+		log.error("Unable to buid retrieval plan for video: " + videoId);
 		return new TodoMal<RetrievalPlan>(retrievalPlan);
 	}
 
