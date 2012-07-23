@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import lombok.Getter;
 
+@Deprecated
 public class CachosRepo implements Serializable {
 	
 	@Getter private final ConcurrentMap<Video, ConcurrentHashMap<User, List<Cacho>>> cachosRepo = new ConcurrentHashMap<Video, ConcurrentHashMap<User,List<Cacho>>>();

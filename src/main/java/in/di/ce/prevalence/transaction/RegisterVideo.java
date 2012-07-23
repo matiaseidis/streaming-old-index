@@ -6,9 +6,13 @@ import in.di.ce.Video;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.prevayler.TransactionWithQuery;
 
 public class RegisterVideo implements TransactionWithQuery {
+	
+	public static final Log log = LogFactory.getLog(RegisterVideo.class);
 
 	/**
 	 * 
@@ -36,9 +40,20 @@ public class RegisterVideo implements TransactionWithQuery {
 		Tracking tracking = (Tracking) prevalentSystem;
 		
 		/*TODO validar si ya existe*/
+		if(tracking.getVideo(videoId) != null) {
+			log.warn("El video que se intenta registrar <id: "+videoId+"><fileName: "+fileName+"> ya existe en el indice");
+			return false;
+		}
 		
 		Video video = new Video(videoId, fileName, lenght, chunks, userId);
-		return tracking.registerVideo(video);
+		boolean ok = tracking.registerVideo(video, userId, chunks);
+		if(ok) {
+			log.info("Se registro el video <id: "+videoId+"><fileName: "+fileName+"> en el indice");
+		} else {
+			log.error("No se pudo registrar el video <id: "+videoId+"><fileName: "+fileName+"> en el indice");
+			
+		}
+		return ok ? video : null;
 	}
 
 

@@ -6,7 +6,9 @@ import in.di.ce.prevalence.BaseModel;
 import in.di.ce.prevalence.transaction.RegisterChunks;
 import in.di.ce.prevalence.transaction.RegisterVideo;
 import in.di.ce.prevalence.transaction.UnregisterChunks;
+import in.di.ce.service.rta.Ok;
 import in.di.ce.service.rta.Respuesta;
+import in.di.ce.service.rta.TodoMal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,7 +19,6 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -40,84 +41,125 @@ public class VideoService {
 	//	@Autowired @Setter @Getter private Tracking tracking;
 	@Autowired @Setter @Getter private BaseModel baseModel;
 
+	/**
+	 * 
+	 * @param videoId
+	 * @return el video para este video id
+	 */
 	@RequestMapping(value="check/{videoId}", method = RequestMethod.GET)
 	public @ResponseBody Respuesta<Video> checkVideo(@PathVariable String videoId){
 		Video video = null;
 		if(baseModel.getModel().videoExist(videoId)){
 			video = baseModel.getModel().getVideo(videoId);
+			return new Ok(video);
+		} else {
+			return new TodoMal(video);
 		}
-		return new Respuesta(video);
+		
 	}	
 
+	/**
+	 * 
+	 * @param videoId
+	 * @param fileName
+	 * @param lenght
+	 * @param userId
+	 * @param chunks
+	 * @return true si se registro el video
+	 */
 	@RequestMapping(value="register/{videoId}/{fileName}/{lenght}/{userId}", method = RequestMethod.POST)
-	public @ResponseBody Respuesta<Boolean> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable Long lenght, @PathVariable String userId, @RequestParam(value="chunks", required=true) String chunks){
+	public @ResponseBody Respuesta<Video> registerVideo(@PathVariable String videoId, @PathVariable String fileName, @PathVariable Long lenght, @PathVariable String userId, @RequestParam(value="chunks", required=true) String chunks){
+		
+		if (!baseModel.getModel().userExist(userId)) {
+			return new TodoMal("El usuario "+userId+" no existe");
+		}
+		
 		if(baseModel.getModel().videoExist(videoId)){
 			log.info("Unable to add video ["+videoId+"]in videos central repository. Video already exists");
-			throw new IllegalArgumentException("video id: " + videoId+" is already registered in central repository");
+			Video video = new Video(videoId, "video id: " + videoId+" is already registered in central repository", 0, null, null);
+			return new TodoMal("El video ya existe en el indice. Se registraron los chunks para este usuario");
 		}
 
-
-		boolean registered = false;
+		Video registered = null;
 		try {
-			registered = (Boolean)this.getBaseModel().getPrevayler().execute(new RegisterVideo(videoId, fileName, lenght, this.chunkIds(chunks), userId));
+			registered = (Video)this.getBaseModel().getPrevayler().execute(new RegisterVideo(videoId, fileName, lenght, this.chunkIds(chunks), userId));
+			return new Ok(registered);
 		} catch (Exception e) {
 			log.error("unable to register video "+ videoId, e);
 		}
 
-		return new Respuesta(registered);
+		return new TodoMal(registered);
 	}
 
+	/**
+	 * 
+	 * @param fileName
+	 * @param userId
+	 * @param chunks
+	 * @return map con los chunks registrados para este usuario
+	 */
 	/*
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
+//	localhost:9000/video/registerChunks/0000179564.flv/demo-user-0/0!14ed453e2706e1d43cbd4753199537b8c381678e
 	@RequestMapping(value="registerChunks/{fileName}/{userId}/{chunks}", method = RequestMethod.GET)
-	public Map<Integer, String> registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
-
+	public @ResponseBody Respuesta registerChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
+		
 		if(StringUtils.isEmpty(fileName)){
-			throw new IllegalArgumentException("File name can not be null nor empty");
+			log.error("File name can not be null nor empty");
+			return new TodoMal("File name can not be null nor empty");
 		}
 		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
 		if(StringUtils.isEmpty(videoId)){
-			throw new IllegalArgumentException("No video id for file "+fileName+" in central repository");
+			log.error("No video id for file "+fileName+" in central repository");
+			return new TodoMal("No video id for file "+fileName+" in central repository");
 		}
 		Map<Integer, String> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
 		if(MapUtils.isEmpty(chunkOrdinals)){
-			throw new IllegalArgumentException("No chunks passed for register for file: "+fileName+" - id: "+videoId);
+			log.error("No chunks passed for register for file: "+fileName+" - id: "+videoId);
+			return new TodoMal("No chunks passed for register for file: "+fileName+" - id: "+videoId);
 		}
-		log.info("registering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
-
+		log.info("registering chunks "+chunkOrdinals+"for video "+videoId+" by user " + userId);
+		
 		try {
 			this.getBaseModel().getPrevayler().execute(new RegisterChunks(videoId, userId, new ArrayList(chunkOrdinals.keySet())));
 		} catch (Exception e) {
 			log.error("unable to register chunks "+ userId +" - "+videoId+" - "+chunks, e);
 		}
-
-		return chunkOrdinals;
+		
+		return new Ok(chunkOrdinals);
 	}
+	
+	/**
+	 * 
+	 * @param fileName
+	 * @param userId
+	 * @param chunks
+	 * @return map con los chunks borrados del registro para este usuario
+	 */
 	/*
 	 * chunk map format expected: 
 	 * ordinal-chunkId|ordinal-chunkId
 	 */
 	@RequestMapping(value="unregisterChunks/{fileName}/{userId}/{from}/{lenght}", method = RequestMethod.GET)
 	public Map<Integer, String> unregisterChunks(@PathVariable String fileName, @PathVariable String userId, @PathVariable String chunks){
-
+		
 		if(StringUtils.isEmpty(fileName)){
 			throw new IllegalArgumentException("File name can not be null nor empty");
 		}
 		String videoId = baseModel.getModel().getVideoIdFromFilename(fileName);
 		Map<Integer, String> chunkOrdinals = chunkOrdinalsForExistentVideo(baseModel.getModel(), videoId, chunks);
 		log.info("unregistering chunks "+chunkOrdinals+"for video " +  videoId + " by user " + userId);
-
+		
 		try {
 			this.getBaseModel().getPrevayler().execute(new UnregisterChunks(videoId, userId, new ArrayList(chunkOrdinals.keySet())));
 		} catch (Exception e) {
 			log.error("unable to unregister chunks "+ userId +" - "+videoId+" - "+chunks, e);
 		}
-
+		
 		return chunkOrdinals;
 	}
-
 
 	@RequestMapping(value="getChunks/{videoId}/{userId}", method = RequestMethod.GET)
 	public @ResponseBody List<String> getChunksFrom(@PathVariable String videoId, @PathVariable String userId){
@@ -131,7 +173,7 @@ public class VideoService {
 	public Map<Integer, String> chunkOrdinalsForExistentVideo(Tracking tracking, String videoId, String chunks) {
 
 		if(!tracking.videoExist(videoId)){
-			throw new IllegalArgumentException("video id: " + videoId+" does not exist");
+			throw new IllegalArgumentException("video id: "+videoId+" does not exist");
 		}
 		Video video = tracking.getVideo(videoId);
 
@@ -141,7 +183,7 @@ public class VideoService {
 			String[] splittedChunk = chunk.split("!");
 			int chunkOrdinal = Integer.parseInt(splittedChunk[0]);
 			String chunkId = splittedChunk[1];
-
+			
 			if(chunkOrdinal > video.getChunks().size()) {
 				throw new IllegalArgumentException("Trying to register chunk that is beyond video's size");
 			}

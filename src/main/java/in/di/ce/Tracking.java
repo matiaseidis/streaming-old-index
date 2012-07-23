@@ -3,8 +3,10 @@ package in.di.ce;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -37,29 +39,49 @@ public class Tracking implements Serializable {
 	 * chunks repository
 	 * [videoId:[userId:[chunks]]]
 	 */
-	private final ConcurrentMap<String, Map<String, List<Integer>>> usersLocalRepoTracking = new ConcurrentHashMap<String, Map<String,List<Integer>>>();
+	private final ConcurrentMap<String, Map<String, Set<Integer>>> usersLocalRepoTracking = new ConcurrentHashMap<String, Map<String, Set<Integer>>>();
 
 
-	public boolean registerVideo(Video video){
+	public boolean registerVideo(Video video, String userId, List<String> chunks){
 		boolean newVideo = videos.putIfAbsent(video.getId(), video) == null; 
 		if(newVideo) {
-			usersLocalRepoTracking.put(video.getId(), new HashMap<String, List<Integer>>());
+			
+			usersLocalRepoTracking.put(video.getId(), new HashMap<String, Set<Integer>>());
+			
 		}
+		List<Integer> ordinals = new ArrayList<Integer>();
+		for( int i = 0; i< chunks.size(); i++) {
+			ordinals.add(i);
+		}
+		
+		Set<Integer> userChunks = usersLocalRepoTracking.get(video.getId()).get(userId); 
+		if (userChunks == null) {
+			userChunks = new HashSet<Integer>();
+		}
+		userChunks.addAll(ordinals);
+		usersLocalRepoTracking.get(video.getId()).put(userId, userChunks);
+
 		return newVideo;
 	}
 
 	public boolean registerChunks(String videoId, String userId, List<Integer> chunks){
 
 		if(usersLocalRepoTracking.get(videoId) == null){
+			log.error("Can't register chunks for video: "+videoId+". there is no such video in database.");
 			throw new IllegalStateException("Can't register chunks for video: "+videoId+". there is no such video in database.");
 		}
 
 		if (usersLocalRepoTracking.get(videoId).get(userId) == null){
-			usersLocalRepoTracking.get(videoId).put(userId, new ArrayList<Integer>());
+			usersLocalRepoTracking.get(videoId).put(userId, new HashSet<Integer>());
 			log.info("adding chunk list for video "+ videoId + " for user " + userId);
 		}
-
-		return usersLocalRepoTracking.get(videoId).get(userId).addAll(chunks);
+		boolean someAdded = usersLocalRepoTracking.get(videoId).get(userId).addAll(chunks);
+		if( someAdded ) {
+			log.info("Added to index for user "+userId+" for video "+videoId+" the chunks "+chunks);
+		} else {
+			log.warn("No chunk of "+chunks+" was added to index for user "+userId+" for video "+videoId);
+		}
+		return someAdded;
 	}
 
 	public boolean unregisterChunks(String videoId, String userId, List<Integer> chunks){
@@ -70,7 +92,7 @@ public class Tracking implements Serializable {
 		return usersLocalRepoTracking.get(videoId).get(userId).removeAll(chunks);
 	}
 
-	public List<Integer>getChunksFrom(String videoId, String userId){
+	public Set<Integer>getChunksFrom(String videoId, String userId){
 
 		if (!usersLocalRepoTracking.containsKey(videoId) || !usersLocalRepoTracking.get(videoId).containsKey(userId)){ 
 			return null;
@@ -88,7 +110,7 @@ public class Tracking implements Serializable {
 
 	public RetrievalPlan plan(String videoId, String userId) {
 
-		Map<String, List<Integer>> usersWithChunks = usersLocalRepoTracking.get(videoId);
+		Map<String, Set<Integer>> usersWithChunks = usersLocalRepoTracking.get(videoId);
 
 		if(MapUtils.isEmpty(usersWithChunks)){
 			log.info("Unable to ellaborate retrieving plan for video "+videoId+" for user "+userId);
@@ -112,7 +134,7 @@ public class Tracking implements Serializable {
 
 		Video video = this.getVideo(videoId);
 
-		List<UserChunks> userChunksList = new ArrayList<UserChunks>();
+		Set<UserChunks> userChunksList = new HashSet<UserChunks>();
 		
 		List<String> usersToRequest = usersToRequest(usersWithChunks, userId);
 
@@ -157,7 +179,7 @@ public class Tracking implements Serializable {
 		return rp;
 	}
 
-	private List<UserCacho> cachosFrom(List<UserChunks> chunks, Video video) {
+	private List<UserCacho> cachosFrom(Set<UserChunks> chunks, Video video) {
 
 		List<UserCacho> result = new ArrayList<UserCacho>();
 		for(UserChunks uc : chunks) {
@@ -182,25 +204,27 @@ public class Tracking implements Serializable {
 		return cacho;
 	}
 
-	private User loadUser(String userId) {
-		
-		if(this.users.get(userId)!= null){
-			throw new RuntimeException("Hay que implementar esto");
+	public boolean newUser(User newUser) {
+		if(!users.containsKey(newUser.getId() ) ) {
+			users.put(newUser.getId(), newUser);
+			return true;
 		}
-		/*
-		 * FIXME implementar alta de usuarios y validaciones en el flujo
-		 */
-		return new User(userId, "localhost", 10002);
+		return false;
+	}
+	
+	private User loadUser(String userId) {
+		User user = this.users.get(userId);
+		return user;
 	}
 
 	private List<String> usersToRequest(
-			Map<String, List<Integer>> usersWithChunks, String userId) {
+			Map<String, Set<Integer>> usersWithChunks, String userId) {
 		List<String> usersToRequest = new ArrayList<String>(usersWithChunks.keySet());
 		usersToRequest.remove(userId);
 		return usersToRequest;
 	}
 
-	private UserChunks getShorterUserChunksFrom(int i, Map<String, List<Integer>> usersWithChunks, List<String> usersToRequest) {
+	private UserChunks getShorterUserChunksFrom(int i, Map<String, Set<Integer>> usersWithChunks, List<String> usersToRequest) {
 
 		int max = i == 0 ? maxFirstCachoSize : maxCachoSize;
 		String user = null;
@@ -244,6 +268,10 @@ public class Tracking implements Serializable {
 			}
 		}
 		return null;
+	}
+
+	public boolean userExist(String userId) {
+		return users.containsKey(userId);
 	}
 
 

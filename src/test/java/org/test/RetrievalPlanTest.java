@@ -7,8 +7,8 @@ import in.di.ce.Video;
 import in.di.ce.service.VideoService;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,7 +45,7 @@ public class RetrievalPlanTest {
 		/*
 		 * load user cachos   
 		 */
-		List<Integer> chunks = tracking.getChunksFrom(videoId, userId_1);
+		Set<Integer> chunks = tracking.getChunksFrom(videoId, userId_1);
 		Assert.assertEquals(userId_1, chunks.size(), 100);
 		
 		chunks = tracking.getChunksFrom(videoId, userId_2);
@@ -117,6 +117,17 @@ public class RetrievalPlanTest {
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(1).getUser().getId().equals(userId_2));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(2).getUser().getId().equals(userId_3));
 		Assert.assertTrue(retrievalPlan.getUserCachos().get(3).getUser().getId().equals(userId_1));
+		
+		/*
+		 * unregister
+		 */
+		unregisterChunks(userId_4, 300, 400, tracking);
+
+		/*
+		 * load user cachos   
+		 */
+		chunks = tracking.getChunksFrom(videoId, userId_4);
+		Assert.assertEquals(userId_4, chunks.size(), 0);
 	}
 	
 	
@@ -131,6 +142,18 @@ public class RetrievalPlanTest {
 		System.out.println("Chunks from "+from+" to "+to+" for user "+userId+": "+chunksForRegisterByUser);
 		Assert.assertTrue(tracking.registerChunks(videoId, userId, chunkOrdinalsForExistentVideo(tracking, chunksForRegisterByUser)));
 	}
+	
+	private void unregisterChunks(String userId, int from, int to, Tracking tracking) {
+
+		StringBuilder sb = new StringBuilder();
+		for(int i = from; i<=to; i++){
+			sb.append(""+i+chunkSeparator+i+chunkForRegisterSeparator);
+		}
+		String chunksForUnregisterByUser = sb.toString();
+		
+		System.out.println("Chunks from "+from+" to "+to+" for user "+userId+": "+chunksForUnregisterByUser);
+		Assert.assertTrue(tracking.unregisterChunks(videoId, userId, chunkOrdinalsForExistentVideo(tracking, chunksForUnregisterByUser)));
+	}
 
 
 	private void registerNewVideo(Tracking tracking) {
@@ -144,15 +167,17 @@ public class RetrievalPlanTest {
 		 * alta de video
 		 */
 		Video video = new Video(videoId, fileName, videoLenght, chunks, userId_1);
-		boolean registered = tracking.registerVideo(video);
+		boolean registered = tracking.registerVideo(video, userId_1, chunks);
 		Assert.assertTrue(registered);
 	}
 
 
 	private List<Integer> chunkOrdinalsForExistentVideo(Tracking tracking, String chunks) {
-		return new ArrayList<Integer>(
+		List<Integer> result = new ArrayList<Integer>(
 				new VideoService().chunkOrdinalsForExistentVideo(tracking, videoId, chunks).keySet()
 				);
+		
+		return result;
 	}
 
 }
